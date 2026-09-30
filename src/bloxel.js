@@ -1,5 +1,6 @@
 import { frames } from './anim.js';
-import { GROUND, hexToRgb, hit, rgbToHex } from './color.js';
+import { GROUND, glint, hexToRgb, hit, rgbToHex } from './color.js';
+import { createTwinkle } from './twinkle.js';
 import { centerDev, unit } from './pixel.js';
 
 const CELL_PX = 16; // font pixels per bloxel
@@ -103,13 +104,14 @@ export function createBloxels(canvas, source, cardCells) {
   const when = (i) => g.dist[i] / g.maxDist; // 0-1 along the sweep
 
   /** A block of `size` device px, centered in its cell's footprint, on the dark ground. */
-  const paintBlock = (i, size) => {
+  const paintBlock = (i, size, lift = 0) => {
     const x = g.ox + (i % g.cols) * g.cell, y = g.oy + Math.floor(i / g.cols) * g.cell;
     ctx.fillStyle = GROUND;
     ctx.fillRect(x, y, g.cell, g.cell);
     if (size <= 0) return;
     const off = g.inset + Math.floor((g.full - size) / 2);
-    const [r, gr, b] = g.shown.subarray(i * 4, i * 4 + 3);
+    let [r, gr, b] = g.shown.subarray(i * 4, i * 4 + 3);
+    if (lift) ({ r, g: gr, b } = glint(r, gr, b, lift)); // a twinkling block, and so its light hit, is lit
     ctx.fillStyle = `rgb(${r},${gr},${b})`;
     ctx.fillRect(x + off, y + off, size, size);
     if (size < 3 * g.inset) return; // too small yet for lines along its edges
@@ -120,6 +122,17 @@ export function createBloxels(canvas, source, cardCells) {
   const paintCell = (i) => paintBlock(i, Math.round(g.full * easeOut(Math.min(1, (front - when(i)) / GROW))));
 
   layout();
+
+  // The shimmer: a random block that has finished growing brightens and eases back. Ids are cells, and
+  // after a resize an old id may no longer exist.
+  const twinkle = createTwinkle({
+    rate: () => g.count / 150, // a few at a time, not a shower
+    pick: () => {
+      const grown = front === Infinity ? g.count : done; // in wave order, the first `done` cells are grown
+      return grown ? g.order[Math.floor(Math.random() * grown)] : -1;
+    },
+    paint: (i, amount) => { if (i < g.count) paintBlock(i, g.full, amount); },
+  });
 
   return {
     get cols() { return g.cols; },
@@ -145,8 +158,10 @@ export function createBloxels(canvas, source, cardCells) {
       done = 0;
       for (let j = 0; j < g.count && when(g.order[j]) <= front; j++) paintCell(g.order[j]);
     },
+    /** Twinkle the grown blocks: `start()`, `stop()` (let the lit ones fade), `halt()` (all plain at once). */
+    twinkle,
     /** Let go of the private copy of the image. */
-    release() { img.width = img.height = 0; },
+    release() { twinkle.halt(); img.width = img.height = 0; },
     /** Blocks grow out of the dark in a wave from the top-left. */
     ripple(ms) {
       done = 0;

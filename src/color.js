@@ -72,6 +72,20 @@ export function brighter(hex, strength = 1) {
 /** The light hit on a bloxel of this color (`brighter`, as a hex code), a little stronger than the base step. */
 export const hit = (r, g, b) => brighter(rgbToHex({ r, g, b }), 1.3);
 
+const glints = new Map();
+
+/**
+ * A color `amount` (0 to 1) of the way from its own shade to a clearly brighter one, as {r, g, b}:
+ * what a twinkling bloxel is drawn in. The bright end is `brighter()` at 2.2 times the hit's step.
+ */
+export function glint(r, g, b, amount) {
+  const key = (r << 16) | (g << 8) | b;
+  if (!glints.has(key)) glints.set(key, hexToRgb(brighter(rgbToHex({ r, g, b }), 2.2)));
+  const to = glints.get(key);
+  const mixed = (a, c) => Math.round(a + (c - a) * amount);
+  return { r: mixed(r, to.r), g: mixed(g, to.g), b: mixed(b, to.b) };
+}
+
 /** Mix of `hex` toward `toward` ('#RRGGBB'), `amount` 0-1. */
 export function mix(hex, toward, amount) {
   const a = hexToRgb(hex), b = hexToRgb(toward);

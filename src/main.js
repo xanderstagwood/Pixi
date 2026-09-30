@@ -3,13 +3,14 @@ import { arrange, decide, fit, turnsOnMiddle } from './arrange.js';
 import { hexToRgb, sequence, variations } from './color.js';
 import { extractColors } from './extract.js';
 import { createQueue } from './queue.js';
-import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
+import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, paintTwinkle, renderCard, twinkleCells } from './card.js';
 import { createCarousel } from './carousel.js';
 import { holdButton } from './hold.js';
 import { center, unit, watchPixelSnap } from './pixel.js';
 import { createStage } from './stage.js';
 import { createStack } from './stack.js';
 import { createStore } from './store.js';
+import { createTwinkle } from './twinkle.js';
 import { attachReorder } from './reorder.js';
 import { runScanners } from './scanners.js';
 import { attachSwipe } from './swipe.js';
@@ -134,6 +135,7 @@ async function analyze(file, last) {
 
     setStatus('ANALYZING');
     await bloxels.ripple(T.ripple);
+    if (!stillMotion()) bloxels.twinkle.start(); // once the blocks are grown, a few catch the light
 
     const stack = createStack(CHIPS);
     $('stack-host').append(stack.el);
@@ -155,6 +157,7 @@ async function analyze(file, last) {
     session.scan = scan;
     await scan.finished;
     await Promise.all(landing);
+    bloxels.twinkle.stop(); // the lit ones fade out well before the window closes
 
     await Promise.all(clusters.map((_, slot) => sleep(slot * T.lockGap).then(() => stack.lock(slot))));
     await sleep(T.hold);
@@ -177,6 +180,7 @@ async function analyze(file, last) {
     stage.hide();
     $('stack-host').replaceChildren();
     persist();
+    syncTwinkle();
     // Not on touch (it would raise the keyboard), and not mid-batch (the next image is already coming).
     if (last && matchMedia('(pointer: fine)').matches) card.querySelector('.name').focus({ preventScroll: true });
   } catch (err) {
@@ -340,7 +344,30 @@ addEventListener('drop', (e) => {
   addImages([...e.dataTransfer.files]);
 });
 
-const repaint = () => document.querySelectorAll('.card.palette').forEach(paintCard);
+const repaint = () => { document.querySelectorAll('.card.palette').forEach(paintCard); syncTwinkle(); };
+
+// The focused card shimmers: now and then one of its blocks brightens and eases back, on a layer over the card.
+// Anything else that changes what is focused, or how big things are, comes through repaint, which restarts it.
+const stillMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const shimmers = new Map(); // card -> its twinkle
+function syncTwinkle() {
+  for (const t of shimmers.values()) t.halt();
+  shimmers.clear();
+  const card = carousel.focused;
+  if (stillMotion() || !card?.palette || card.style.visibility === 'hidden') return;
+  const base = card.querySelector('canvas'), overlay = card.querySelector('.twinkle');
+  overlay.width = base.width;
+  overlay.height = base.height;
+  const ctx = overlay.getContext('2d'), blocks = twinkleCells(card.palette), s = unit().n;
+  if (!blocks.length) return;
+  const t = createTwinkle({
+    rate: () => blocks.length / 150, // a few at a time, not a shower
+    pick: () => Math.floor(Math.random() * blocks.length),
+    paint: (i, amount) => paintTwinkle(ctx, blocks[i], s, amount),
+  });
+  t.start();
+  shimmers.set(card, t);
+}
 watchPixelSnap(() => {
   applyLayout();
   repaint();
@@ -361,7 +388,7 @@ fontReady.then(() => {
     paintCard(card);
     card.style.visibility = '';
   }
-  if (kept.length) { carousel.focus(carousel.index, true); setStatus('CAROUSEL'); }
+  if (kept.length) { carousel.focus(carousel.index, true); setStatus('CAROUSEL'); syncTwinkle(); }
 });
 document.fonts.addEventListener('loadingdone', repaint);
 $('version-label').textContent = `Pixi v${VERSION}`;

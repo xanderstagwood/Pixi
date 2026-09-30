@@ -118,7 +118,9 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; }
 .card.add:hover { background: var(--gray-11); --icon-color: var(--gray-1); }
 body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outline-offset: calc(-2 * var(--px)); }
 
-.card canvas { display: block; width: var(--card-w); height: var(--card-h); image-rendering: pixelated; } /* never smoothed: smoothing rings light and dark along block edges */
+.card canvas { display: block; width: var(--card-w); height: var(--card-h); image-rendering: pixelated; }
+/* The twinkle layer: same size, laid over the card's blocks, and never in the way of a click. */
+.card canvas.twinkle { position: absolute; left: 0; top: 0; pointer-events: none; } /* never smoothed: smoothing rings light and dark along block edges */
 
 /* Sits over the name drawn into the canvas (src/card.js layout().name), in the 16px face. */
 .name {

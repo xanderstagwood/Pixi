@@ -1,4 +1,4 @@
-import { GROUND, brighter, hit, inkFor, mix } from './color.js';
+import { GROUND, brighter, glint, hit, inkFor, mix } from './color.js';
 import { unit } from './pixel.js';
 
 // The finished palette card, drawn straight to a canvas in font-pixel units (see pixel.js)
@@ -153,6 +153,47 @@ export function renderCard(canvas, palette, s, { ui = false, dim = false } = {})
     g.fillText(words, Math.round(edge - icon - gap - g.measureText(words).width), base);
     for (const [cx, cy] of PIXI) g.fillRect(edge - icon + cx * s, base - 5 * s + cy * s, s, s); // a 6px icon as tall as a capital, sitting one pixel low
   });
+}
+
+/**
+ * The blocks of a card that may twinkle: those in view and clear of the chips (with their shadow) and
+ * the footer, so a lit block never lands on top of anything else.
+ * @returns {{c: number, r: number, rgb: number[]}[]}
+ */
+export function twinkleCells(palette) {
+  const L = layout();
+  const { grid } = palette;
+  const first = { c: Math.round(grid.cx - cells.cols / 2), r: Math.round(grid.cy - cells.rows / 2) };
+  const block = { x0: L.chips.x - 8, x1: L.chips.x + L.chips.w + 8, y0: L.chips.y - 4, y1: L.chips.y + (CHIPS - 1) * CHIP.pitch + CHIP.h + 12 };
+  const out = [];
+  for (let r = 0; r < cells.rows; r++) {
+    for (let c = 0; c < cells.cols; c++) {
+      const gc = first.c + c, gr = first.r + r;
+      if (gc < 0 || gr < 0 || gc >= grid.cols || gr >= grid.rows) continue;
+      const x = c * CELL, y = r * CELL;
+      const overChips = x < block.x1 && x + CELL > block.x0 && y < block.y1 && y + CELL > block.y0;
+      if (overChips || y + CELL > L.name.y - 4) continue;
+      const i = (gr * grid.cols + gc) * 4;
+      out.push({ c, r, rgb: [grid.rgb[i], grid.rgb[i + 1], grid.rgb[i + 2]] });
+    }
+  }
+  return out;
+}
+
+/**
+ * Draws one block of a card lit by `amount` (0 to 1) on a transparent layer laid over the card, so the
+ * card itself, and the PNG made from it, never carries a twinkle. 0 clears the block.
+ */
+export function paintTwinkle(ctx, { c, r, rgb }, s, amount) {
+  const cell = CELL * s, x = c * cell, y = r * cell;
+  ctx.clearRect(x, y, cell, cell);
+  if (amount <= 0) return;
+  const lit = glint(rgb[0], rgb[1], rgb[2], amount);
+  ctx.fillStyle = `rgb(${lit.r},${lit.g},${lit.b})`;
+  ctx.fillRect(x + s, y + s, cell - 2 * s, cell - 2 * s);
+  ctx.fillStyle = hit(lit.r, lit.g, lit.b);
+  ctx.fillRect(x + s, y + s, cell - 2 * s, s);
+  ctx.fillRect(x + s, y + s, s, cell - 2 * s);
 }
 
 /** The card as a PNG blob at export size. */
