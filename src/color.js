@@ -1,3 +1,5 @@
+import { shuffle } from './anim.js';
+
 // Pure color math. Colors travel as '#RRGGBB' strings; {r,g,b} is 0-255, hsl is h 0-360, s/l 0-1.
 
 /** The ground between bloxels: the darkest color in the UI (Sprite's --gray-13), almost black but not quite. */
@@ -73,6 +75,21 @@ export const stackOrder = (hexes, lightOnTop) => {
   const key = (i) => temperature(hexes[i]) + lift * luminance(hexes[i]);
   return hexes.map((_, i) => i).sort((a, b) => key(a) - key(b));
 };
+
+/**
+ * A run of `length` colors drawn from `colors`, every one shown as often as the others give or take
+ * one, shuffled, and never the same twice in a row. Decided up front, so what a chip will show is
+ * known before the scanner that hunts it sets off.
+ */
+export function sequence(colors, length) {
+  const out = [];
+  while (out.length < length) {
+    for (const c of shuffle(colors)) {
+      if (out.length < length && c !== out[out.length - 1]) out.push(c);
+    }
+  }
+  return out;
+}
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 

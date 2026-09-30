@@ -1,5 +1,5 @@
 import { frames } from './anim.js';
-import { GROUND, hexToRgb, hit } from './color.js';
+import { GROUND, hexToRgb, hit, rgbToHex } from './color.js';
 import { centerDev, unit } from './pixel.js';
 
 const CELL_PX = 16; // font pixels per bloxel
@@ -126,6 +126,8 @@ export function createBloxels(canvas, source, cardCells) {
     get cell() { return g.cell / g.dpr; }, // css px
     get origin() { return { x: g.ox / g.dpr, y: g.oy / g.dpr }; },
     rgb: (i) => [g.px[i * 4], g.px[i * 4 + 1], g.px[i * 4 + 2]],
+    /** The color cell `i` is drawn in, as hex: what a scanner resting on it is looking at. */
+    color: (i) => rgbToHex({ r: g.shown[i * 4], g: g.shown[i * 4 + 1], b: g.shown[i * 4 + 2] }),
     /** Image-space fractions (0-1) to the cell that holds them, clamped into the grid. */
     cellAt: (fx, fy) => ({
       cx: Math.min(g.cols - 1, Math.max(0, Math.floor(((fx * iw - g.srcX) / g.srcW) * g.cols))),

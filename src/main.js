@@ -1,5 +1,5 @@
 import { rand, randInt, sleep } from './anim.js';
-import { hexToRgb, stackOrder, variations } from './color.js';
+import { hexToRgb, sequence, stackOrder, variations } from './color.js';
 import { extractColors, lightOnTop } from './extract.js';
 import { createProgress } from './progress.js';
 import { createQueue } from './queue.js';
@@ -20,7 +20,7 @@ const track = $('track');
 // Every duration in ms. The shrink is stage.js MORPH_MS, matched by the track transition in CSS.
 const T = {
   ripple: 2000, lockGap: 100, hold: 1200,
-  stagger: 140, roam: [7000, 10500], hits: [6, 10], // hits sets the length of the scan; roam is only the safety cap
+  stagger: 140, roam: [7000, 10500], hits: [12, 16], // hits sets the length of the scan; roam is only the safety cap
   chargeToBurst: 1200,
 };
 const MAX_SIDE = 2048; // the working copy of a huge image never exceeds this
@@ -37,10 +37,11 @@ const bar = createProgress($('progress'));
 const stage = createStage($('stage'), $('stage').querySelector('canvas'));
 
 /**
- * Seam for the future decision engine: given every slot's five candidates, return the
- * index to keep for each. Until then every slot keeps its base color.
+ * Seam for the future decision engine: given every slot's five candidates, return the index to
+ * keep for each. Until then it is a coin toss between the base color and one of its subtle
+ * variations, so the same image comes out a little different each time.
  */
-const choose = (slots) => slots.map(() => 0);
+const choose = (slots) => slots.map((c) => (Math.random() < 0.5 ? 0 : randInt(1, c.length - 1)));
 
 /** Decodes the file into a working canvas capped at MAX_SIDE; the original is let go at once. */
 async function load(file) {
@@ -121,26 +122,24 @@ async function analyze(file, last) {
     $('stack-host').append(stack.el);
     stack.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'steps(5)' });
 
-    const targets = clusters.map((c) => ({ rgb: Object.values(hexToRgb(c.hex)), fx: c.x, fy: c.y }));
-    // The bar's middle stretch counts real work: each stop and each parking.
-    const units = CHIPS * 8;
+    const rgbOf = (hex) => Object.values(hexToRgb(hex));
+    const targets = clusters.map((c, i) => ({ rgb: rgbOf(c.hex), final: rgbOf(candidates[i][keep[i]]) }));
+    // The bar's middle stretch counts real work: each rest and each parking.
+    const units = CHIPS * ((T.hits[0] + T.hits[1]) / 2 + 1);
     let worked = 0;
     const step = () => bar.to(0.2 + 0.6 * Math.min(1, ++worked / units), 400);
 
-    // The chips move with the drones. A chip appears the first time its drone comes to rest on a
-    // bloxel, shifts to another candidate every time that drone rests again, and lands on the
-    // kept color when the drone parks: the two look like one mechanism.
-    const lastShown = clusters.map(() => -1);
-    const another = (i) => {
-      let c;
-      do { c = randInt(0, candidates[i].length - 1); } while (c === lastShown[i]);
-      return (lastShown[i] = c);
-    };
+    // What each chip will show is decided before anything moves, and the drone that hunts it goes to
+    // the bloxel closest to that color: it comes to rest there, and only then does the chip shift.
+    // When it parks, the chip lands on the kept color.
+    const plan = candidates.map((c) => sequence(c, T.hits[1] + 2));
+    const taken = clusters.map(() => 0);
     const landing = [];
-    const scan = runScanners($('scanners'), bloxels, targets, (i) => {
-      step();
-      landing.push(stack.swapTo(slotOf[i], candidates[i][keep[i]]));
-    }, { ...T, onStop: (i) => { step(); stack.swapTo(slotOf[i], candidates[i][another(i)]); } });
+    const scan = runScanners($('scanners'), bloxels, targets, {
+      next: (i) => { const hex = plan[i][taken[i]++]; return { hex, rgb: rgbOf(hex) }; },
+      onStop: (i, hex) => { step(); stack.swapTo(slotOf[i], hex); },
+      onFinish: (i) => { step(); landing.push(stack.swapTo(slotOf[i], candidates[i][keep[i]])); },
+    }, T);
     session.scan = scan;
     await scan.finished;
     await Promise.all(landing);

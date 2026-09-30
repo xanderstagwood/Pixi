@@ -1,7 +1,7 @@
 // Run: node test/check.mjs. Smallest checks that fail if the pure logic breaks.
 import assert from 'node:assert/strict';
 import { crc32 as nodeCrc } from 'node:zlib';
-import { stackOrder, mix, variations, hexToHsl } from '../src/color.js';
+import { sequence, stackOrder, mix, variations, hexToHsl } from '../src/color.js';
 import { extractColors, lightOnTop } from '../src/extract.js';
 import * as f from '../src/export/formats.js';
 import { zip } from '../src/export/zip.js';
@@ -22,6 +22,12 @@ const v = variations('#FF0000');
 assert.equal(v.length, 5);
 assert.equal(v[0], '#FF0000');
 assert.ok(Math.abs(hexToHsl(v[3]).h - 350) < 1 && Math.abs(hexToHsl(v[4]).h - 10) < 1);
+
+// A predetermined run of colors: right length, only the given colors, none twice in a row.
+const run = sequence(['#111111', '#222222', '#333333', '#444444', '#555555'], 17);
+assert.equal(run.length, 17);
+assert.ok(run.every((c) => ['#111111', '#222222', '#333333', '#444444', '#555555'].includes(c)));
+assert.ok(run.every((c, i) => i === 0 || c !== run[i - 1]));
 
 // Two flat halves extract to their own colors, at a coordinate inside their half.
 const w = 20, h = 10, data = new Uint8ClampedArray(w * h * 4);

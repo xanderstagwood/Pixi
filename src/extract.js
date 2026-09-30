@@ -3,19 +3,20 @@ import { rgbToHex } from './color.js';
 /**
  * K-means over RGBA pixels. Returns `k` clusters, each with its centroid hex and the
  * position (0-1 fractions of the image) of the pixel nearest that centroid, so a scanner
- * has a real place to land. Deterministic: k-means++ seeding with a fixed-step pick.
+ * has a real place to land. Seeding starts from a random pixel and then takes the pixel farthest from every
+ * centroid so far, so the same image can come out slightly different each time.
  * @param {{data: Uint8ClampedArray, width: number, height: number}} img
  * @returns {{hex: string, x: number, y: number}[]}
  */
-export function extractColors({ data, width, height }, k = 7, iterations = 12) {
+export function extractColors({ data, width, height }, k = 7, iterations = 12, random = Math.random) {
   const px = [];
   for (let i = 0; i < data.length; i += 4) if (data[i + 3] >= 128) px.push(i);
   if (!px.length) return [];
   const at = (p) => [data[p], data[p + 1], data[p + 2]];
   const dist = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
 
-  // Seed: first pixel, then repeatedly the pixel farthest from every chosen centroid.
-  const cents = [at(px[0])];
+  // Seed: a random pixel, then repeatedly the pixel farthest from every chosen centroid.
+  const cents = [at(px[Math.floor(random() * px.length)])];
   while (cents.length < k) {
     let best = px[0], bestD = -1;
     for (const p of px) {
