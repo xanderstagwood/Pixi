@@ -1,4 +1,4 @@
-import { stepOut } from './anim.js';
+import { EASE, slideOut } from './anim.js';
 
 const icon = (name) => `<span class="icon icon--${name}"></span>`;
 
@@ -45,12 +45,23 @@ export function createCarousel(track, onFocus = () => {}) {
       focus(cards().indexOf(card));
       return card;
     },
-    /** Steps the card out and closes the gap without moving what the viewer is looking at. */
-    remove: (card) => stepOut(card, () => {
-      const at = cards().indexOf(card);
-      card.remove();
-      focus(at < index ? index - 1 : index, true);
-    }),
+    /** Slides the card out (up, or left with `axis` 'X'), then glides the rest into the gap without moving what the viewer is looking at. */
+    async remove(card, axis) {
+      if (card.leaving) return;
+      card.leaving = true;
+      await slideOut(card, () => {
+        const before = new Map(cards().map((c) => [c, c.getBoundingClientRect()]));
+        const at = cards().indexOf(card);
+        card.remove();
+        focus(at < index ? index - 1 : index, true);
+        // FLIP: the DOM has already jumped, so play each card from where it stood to where it is now.
+        cards().forEach((c) => {
+          const [was, now] = [before.get(c), c.getBoundingClientRect()];
+          const [dx, dy] = [was.left - now.left, was.top - now.top];
+          if (dx || dy) c.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 400, easing: EASE });
+        });
+      }, axis);
+    },
     /** Move the `from`th palette card to sit at palette position `to`, then glide to it. */
     move(from, to) {
       const list = [...track.querySelectorAll('.card.palette')];

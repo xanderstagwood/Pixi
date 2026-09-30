@@ -228,7 +228,7 @@ function burst(button) {
 function wire(card) {
   const p = card.palette, name = card.querySelector('.name'), dl = card.querySelector('.dl');
   name.value = p.name;
-  card.querySelector('.rm').addEventListener('click', () => { if (idle()) carousel.remove(card).then(persist); });
+  card.querySelector('.rm').addEventListener('click', () => dismiss(card, 'Y'));
   name.addEventListener('input', () => { p.name = name.value; paintCard(card); persistSoon(); });
   name.addEventListener('keydown', (e) => { if (e.key === 'Enter') name.blur(); });
   holdButton(dl, {
@@ -283,6 +283,7 @@ const addImages = (files) => {
 };
 
 const go = (i) => { if (idle()) carousel.focus(i); };
+function dismiss(card, axis) { if (idle()) carousel.remove(card, axis).then(persist); }
 // A narrow screen stacks the cards top to bottom; a wide one lays them out left to right.
 const narrow = matchMedia('(max-width: 640px)');
 const vertical = () => narrow.matches;
@@ -291,7 +292,7 @@ narrow.addEventListener('change', applyAxis);
 applyAxis();
 
 attachReorder(track, { canDrag: idle, vertical, onReorder: (from, to) => { carousel.move(from, to); persist(); } });
-attachSwipe(track, { canSwipe: idle, vertical, index: () => carousel.index, onSettle: go });
+attachSwipe(track, { canSwipe: idle, vertical, index: () => carousel.index, onSettle: go, onDismiss: dismiss });
 
 // The wheel steps through the cards: a notch is a card, and a trackpad's small deltas add up to one.
 let wheelSum = 0, wheelLast = 0, wheelStep = 0;

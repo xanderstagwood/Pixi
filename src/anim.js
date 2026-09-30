@@ -41,10 +41,13 @@ export const frames = (fn) => {
   return unlessAway(run).finally(() => { live = false; cancelAnimationFrame(raf); });
 };
 
-/** Steps an element out in a few hard frames; `done` runs on the frame it disappears. */
-export async function stepOut(el, done, ms = 260) {
-  const a = el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms, easing: 'steps(4)', fill: 'forwards' });
-  await a.finished;
+/**
+ * Slides an element out of view from wherever it is (a drag may have moved it), up for axis 'Y' and left
+ * for 'X'; `done` runs on the frame it is gone, before the animation lets go.
+ */
+export async function slideOut(el, done, axis = 'Y', ms = 360) {
+  const a = el.animate({ transform: `translate${axis}(${axis === 'Y' ? '-100vh' : '-100vw'})` }, { duration: ms, easing: EASE, fill: 'forwards' });
+  await unlessAway(a.finished);
   done();
   a.cancel();
 }
