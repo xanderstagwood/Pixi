@@ -54,7 +54,7 @@ export function temperature(hex) {
  * one font pixel line along its top edge. Faint on purpose: it only keeps dark blocks
  * (which sit at the ground color) reading as squares.
  */
-export const hit = (r, g, b) => `rgb(${Math.round(r + (255 - r) * 0.08)},${Math.round(g + (255 - g) * 0.08)},${Math.round(b + (255 - b) * 0.08)})`;
+export const hit = (r, g, b) => `rgb(${Math.round(r + (255 - r) * 0.03)},${Math.round(g + (255 - g) * 0.03)},${Math.round(b + (255 - b) * 0.03)})`;
 
 /** Mix of `hex` toward `toward` ('#RRGGBB'), `amount` 0-1. */
 export function mix(hex, toward, amount) {
