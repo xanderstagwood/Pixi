@@ -1,6 +1,6 @@
 import { EASE_OUT } from './anim.js';
-import { CHIP_W, textOffset } from './card.js';
-import { inkFor } from './color.js';
+import { CHIP_HIT, CHIP_W, textOffset } from './card.js';
+import { brighter, inkFor } from './color.js';
 import { unit } from './pixel.js';
 
 const EMPTY = '#201F1E';
@@ -11,6 +11,7 @@ const chip = (hex, label = hex) => {
   el.className = 'chip';
   el.style.setProperty('--c', hex);
   el.style.setProperty('--ink', inkFor(hex));
+  el.style.setProperty('--hit', brighter(hex, CHIP_HIT)); // the light hit along its top, the same one card.js draws
   el.textContent = label;
   // Centered by hand, on a whole device pixel, exactly as src/card.js draws it.
   const { n, dpr } = unit();

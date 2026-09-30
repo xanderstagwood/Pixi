@@ -42,12 +42,35 @@ export function luminance(hex) {
 
 export const inkFor = (hex) => (luminance(hex) > 0.5 ? '#1B1A19' : '#F3F2F1');
 
+const lifted = new Map();
+
 /**
- * The light hit on a bloxel: its own color a very little brighter, as a CSS color, for a
- * one font pixel line along its top edge. Faint on purpose: it only keeps dark blocks
- * (which sit at the ground color) reading as squares.
+ * A slightly brighter shade of `hex`, for a light hit along the top edge of whatever sits on that color.
+ * Lifted in OKLCH: hue and chroma stay (a touch more chroma, since brightening alone reads washed out),
+ * so it is the same color, brighter, and never a veil of white over it. The step grows with lightness:
+ * a dark color needs only a whisper to catch the light, and the same step that suits a mid-tone is a
+ * glare on near-black. `strength` scales the step (1 for bloxels, more for a bigger element).
  */
-export const hit = (r, g, b) => `rgb(${Math.round(r + (255 - r) * 0.03)},${Math.round(g + (255 - g) * 0.03)},${Math.round(b + (255 - b) * 0.03)})`;
+export function brighter(hex, strength = 1) {
+  const key = `${hex}${strength}`;
+  if (!lifted.has(key)) {
+    const { L, C, h } = toOklch(rgbToOklab(hexToRgb(hex)));
+    const step = strength * (0.01 + 0.03 * L);
+    // A vivid color sits near the edge of what a screen can show, and lifting it whole would squeeze its
+    // chroma. Take the biggest share of the step that keeps at least 96% of the chroma.
+    let out = hex;
+    for (const share of [1, 0.75, 0.5, 0.3]) {
+      const rgb = oklchToRgb({ L: Math.min(1, L + share * step), C: C * 1.06, h });
+      out = rgbToHex(rgb);
+      if (toOklch(rgbToOklab(rgb)).C >= 0.96 * C) break;
+    }
+    lifted.set(key, out);
+  }
+  return lifted.get(key);
+}
+
+/** The light hit on a bloxel of this color (`brighter`, as a hex code). */
+export const hit = (r, g, b) => brighter(rgbToHex({ r, g, b }));
 
 /** Mix of `hex` toward `toward` ('#RRGGBB'), `amount` 0-1. */
 export function mix(hex, toward, amount) {

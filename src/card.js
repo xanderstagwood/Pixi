@@ -1,4 +1,4 @@
-import { GROUND, hit, inkFor, mix } from './color.js';
+import { GROUND, brighter, hit, inkFor, mix } from './color.js';
 import { unit } from './pixel.js';
 
 // The finished palette card, drawn straight to a canvas in font-pixel units (see pixel.js)
@@ -15,6 +15,7 @@ const CHIP = { w: 144, h: 32, pitch: 48 };
 export const CHIP_W = CHIP.w;
 const CHIPS_H = (CHIPS - 1) * CHIP.pitch + CHIP.h;
 const GRAY_5 = '#979693', INK = '#F3F2F1';
+export const CHIP_HIT = 1.6; // a chip's light hit is a bigger step than a bloxel's
 export const EXPORT_SCALE = 4;
 // A 6px capital centered between the 1px highlight and the 1px shadow sits on this baseline;
 // the 32px name's 12px capitals are centered in their 32px line.
@@ -107,7 +108,7 @@ export function renderCard(canvas, palette, s, { ui = false, dim = false } = {})
     g.fillStyle = hex;
     g.fillRect(x, y, w, h);
     g.restore();
-    g.fillStyle = mix(hex, '#FFFFFF', 0.25);
+    g.fillStyle = brighter(hex, CHIP_HIT);
     g.fillRect(x, y, w, s);
     g.fillStyle = mix(hex, '#000000', 0.4);
     g.fillRect(x, y + h - s, w, s);

@@ -1,7 +1,7 @@
 // Run: node test/check.mjs. Smallest checks that fail if the pure logic breaks.
 import assert from 'node:assert/strict';
 import { crc32 as nodeCrc } from 'node:zlib';
-import { sequence, mix, variations, hexToRgb } from '../src/color.js';
+import { brighter, sequence, mix, variations, hexToRgb } from '../src/color.js';
 import { extractColors } from '../src/extract.js';
 import { arrange, decide, shadeCost, temperatureCost } from '../src/arrange.js';
 import { classify } from '../src/perceive.js';
@@ -19,6 +19,16 @@ assert.equal(v.length, 5);
 assert.equal(v[0], '#D04A2A');
 assert.ok(lch[1].L < lch[0].L && lch[2].L > lch[0].L);
 assert.ok(Math.abs(lch[3].h - lch[0].h + 8) < 1.5 && Math.abs(lch[4].h - lch[0].h - 8) < 1.5);
+
+// A light hit is the same color, brighter: hue kept, chroma not lost, and a smaller step on a dark color than on a mid one.
+const lchOf = (h) => toOklch(rgbToOklab(hexToRgb(h)));
+for (const base of ['#A61520', '#333867', '#FC6D34', '#8FB8C9']) {
+  const a = lchOf(base), b = lchOf(brighter(base));
+  assert.ok(b.L > a.L, `${base} gets lighter`);
+  assert.ok(Math.abs(b.h - a.h) < 4, `${base} keeps its hue`);
+  assert.ok(b.C >= a.C * 0.95, `${base} keeps its chroma`);
+}
+assert.ok(lchOf(brighter('#1B1A19')).L - lchOf('#1B1A19').L < lchOf(brighter('#A61520')).L - lchOf('#A61520').L, 'near-black gets a smaller step');
 
 // A predetermined run of colors: right length, only the given colors, none twice in a row.
 const run = sequence(['#111111', '#222222', '#333333', '#444444', '#555555'], 17);

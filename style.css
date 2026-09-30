@@ -25,6 +25,7 @@
   --gray-11: #252423;
   --gray-12: #201F1E;
   --gray-13: #1B1A19;
+  --gray-12-hit: #272624; /* gray-12 a little brighter (color.js brighter(), strength 1.6): the light hit on the corner tags */
   --accent: #BE1425;
 
   /* --cw and --ch (font pixels) are set by main.js's applyLayout from the viewport size. */
@@ -203,10 +204,10 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
   white-space: nowrap;
   border-style: solid;
   border-width: 0 var(--px) var(--px) var(--px);
-  border-color: transparent rgba(255, 255, 255, 0.05) rgba(0, 0, 0, 0.4) #2E2E33;
+  border-color: transparent var(--gray-12-hit) rgba(0, 0, 0, 0.4) var(--gray-12-hit);
   pointer-events: none;
 }
-#counter::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 var(--px) 0 #2E2E33; pointer-events: none; }
+#counter::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 var(--px) 0 var(--gray-12-hit); pointer-events: none; }
 #counter[hidden] { display: none; }
 
 /* The version tag, the counter's mirror in the bottom-right corner, after Sprite's help tag: the icon
@@ -225,10 +226,10 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
   white-space: nowrap;
   border-style: solid;
   border-width: 0 var(--px) var(--px) var(--px);
-  border-color: transparent rgba(0, 0, 0, 0.4) rgba(0, 0, 0, 0.4) rgba(255, 255, 255, 0.05);
+  border-color: transparent rgba(0, 0, 0, 0.4) rgba(0, 0, 0, 0.4) var(--gray-12-hit);
   pointer-events: none;
 }
-#version::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 var(--px) 0 #2E2E33; pointer-events: none; }
+#version::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 var(--px) 0 var(--gray-12-hit); pointer-events: none; }
 #version .tag-icon { width: calc(24 * var(--px)); display: flex; align-items: center; justify-content: center; }
 #version .icon { --icon-px: calc(2 * var(--px)); --icon-color: var(--gray-4); }
 #version .tag-label { display: flex; align-items: center; padding: 0 calc(8 * var(--px)) 0 0; }
@@ -268,7 +269,7 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
   padding: 0 calc(8 * var(--px));
   background: var(--c);
   color: var(--ink);
-  border-top: var(--px) solid color-mix(in srgb, var(--c) 75%, white);
+  border-top: var(--px) solid var(--hit); /* stack.js: the color a little brighter */
   border-bottom: var(--px) solid color-mix(in srgb, var(--c) 60%, black);
 }
 .flash { position: absolute; inset: 0; border: calc(2 * var(--px)) solid var(--gray-0); pointer-events: none; }
