@@ -118,15 +118,20 @@ export function renderCard(canvas, palette, s, { ui = false } = {}) {
   const n = palette.colors.length;
   palette.colors.forEach((hex, i) => chip(n - 1 - i, hex, palette.copied === i ? 'COPIED' : hex));
 
-  // The name floats over the blocks, a size up, with a hard 1px shadow so it reads on light ones.
+  // The name floats over the blocks, a size up. Its shadow is soft but heavy: drawn twice so the
+  // blur is dense enough to separate it from light blocks without a hard edge.
   const label = palette.name || (ui ? 'NAME' : '');
   if (label) {
     g.font = `${32 * s}px "Stagwood Sprite 64", monospace`;
     const x = L.name.x * s + textOffset(label, L.name.w, s, 32), y = (L.name.y + NAME_BASE) * s;
-    g.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    g.fillText(label, x + s, y + s);
+    g.save();
+    g.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    g.shadowBlur = 8 * s;
+    g.shadowOffsetY = 2 * s;
     g.fillStyle = palette.name ? INK : GRAY_5;
     g.fillText(label, x, y);
+    g.fillText(label, x, y);
+    g.restore();
   }
 }
 
