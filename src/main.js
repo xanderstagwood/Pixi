@@ -395,4 +395,5 @@ document.fonts.addEventListener('loadingdone', repaint);
 // Buttons rather than links: the browser's status bubble for a hovered link would cover this corner.
 document.querySelectorAll('#version [data-url]').forEach((b) => b.addEventListener('click', () => window.open(b.dataset.url, '_blank', 'noopener')));
 $('version-label').textContent = `Pixi v${VERSION}`;
+document.title = `Pixi v${VERSION} (ALPHA)`;
 setStatus('IDLE');
