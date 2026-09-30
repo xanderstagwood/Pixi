@@ -1,5 +1,5 @@
 import { rand, shuffle, sleep, stepOut } from './anim.js';
-import { darkToLight, hexToRgb, variations } from './color.js';
+import { hexToRgb, stackOrder, variations } from './color.js';
 import { extractColors, lightOnTop } from './extract.js';
 import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
 import { createCarousel } from './carousel.js';
@@ -109,9 +109,7 @@ async function analyze(file) {
 
     const bases = clusters.map((c) => c.hex);
     const slotOf = []; // cluster index -> slot (0 = bottom row)
-    const ramp = darkToLight(bases); // darkest first: light ends up on top...
-    if (!lightAtTop) ramp.reverse(); // ...unless the picture is darker at the top
-    ramp.forEach((cluster, slot) => { slotOf[cluster] = slot; });
+    stackOrder(bases, lightAtTop).forEach((cluster, slot) => { slotOf[cluster] = slot; });
     const candidates = bases.map(variations);
     const keep = choose(candidates);
 

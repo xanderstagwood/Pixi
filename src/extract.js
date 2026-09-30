@@ -57,7 +57,8 @@ export function extractColors({ data, width, height }, k = 7, iterations = 12) {
 
 /**
  * Whether the top half of the image is lighter than the bottom half: a light sky over dark
- * ground, or the reverse. The palette stack mirrors it, so it fits the picture's own vibe.
+ * ground, or the reverse. Among colors of similar temperature the stack follows it, so its
+ * light-to-dark direction fits the picture's own vibe.
  * @param {{data: Uint8ClampedArray, width: number, height: number}} img
  */
 export function lightOnTop({ data, width, height }) {

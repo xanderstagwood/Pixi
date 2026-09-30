@@ -52,12 +52,14 @@ export function mix(hex, toward, amount) {
 }
 
 /**
- * Indices of `hexes`, darkest first, so a stack reads as a smooth value ramp instead of
- * jumping around. Temperature nudges the order among near-equal values (cool sinks, warm
- * rises). Indices, not colors, so duplicate colors keep distinct slots.
+ * Indices of `hexes` in stack order, bottom row first: cool at the bottom rising to warm at
+ * the top. That is the priority. Lightness only settles near-ties, keeping the ramp from
+ * jumping in value: lighter above darker when `lightOnTop`, the reverse otherwise. Indices,
+ * not colors, so duplicate colors keep distinct slots.
  */
-export const darkToLight = (hexes) => {
-  const key = (i) => luminance(hexes[i]) + 0.15 * temperature(hexes[i]);
+export const stackOrder = (hexes, lightOnTop) => {
+  const lift = lightOnTop ? 0.15 : -0.15;
+  const key = (i) => temperature(hexes[i]) + lift * luminance(hexes[i]);
   return hexes.map((_, i) => i).sort((a, b) => key(a) - key(b));
 };
 

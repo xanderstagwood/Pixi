@@ -21,7 +21,7 @@ palette-1px.png        One pixel per color. GameMaker, Aseprite, Pyxel Edit, God
                        Lospec: load it as an image and read the pixels as the palette
 palette-card.png       The finished card
 
-Colors run in the card's stack order, bottom to top: light to dark or dark to light, whichever suits the image.
+Colors run in the card's stack order, bottom to top: cool to warm, with light and dark ordered to suit the image.
 `;
 
 const canvasBlob = (canvas) => new Promise((ok) => canvas.toBlob(ok, 'image/png'));

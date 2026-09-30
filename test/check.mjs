@@ -1,14 +1,17 @@
 // Run: node test/check.mjs. Smallest checks that fail if the pure logic breaks.
 import assert from 'node:assert/strict';
 import { crc32 as nodeCrc } from 'node:zlib';
-import { darkToLight, mix, variations, hexToHsl } from '../src/color.js';
+import { stackOrder, mix, variations, hexToHsl } from '../src/color.js';
 import { extractColors, lightOnTop } from '../src/extract.js';
 import * as f from '../src/export/formats.js';
 import { zip } from '../src/export/zip.js';
 
-// Value ramp: black, then gray, then white. Duplicates keep separate indices.
-assert.deepEqual(darkToLight(['#FFFFFF', '#000000', '#808080']), [1, 2, 0]);
-assert.deepEqual(darkToLight(['#0000FF', '#0000FF']).sort(), [0, 1]);
+// Temperature first, bottom to top: cool blue, then gray, then warm orange. Duplicates keep separate indices.
+assert.deepEqual(stackOrder(['#FF8000', '#0080FF', '#808080'], true), [1, 2, 0]);
+assert.deepEqual(stackOrder(['#0000FF', '#0000FF'], true).sort(), [0, 1]);
+// Lightness only breaks near-ties: light above dark, or the reverse.
+assert.deepEqual(stackOrder(['#EEEEEE', '#222222'], true), [1, 0]);
+assert.deepEqual(stackOrder(['#EEEEEE', '#222222'], false), [0, 1]);
 assert.equal(mix('#000000', '#FFFFFF', 0.5), '#808080');
 
 // Five variations, base first, hue shifts wrap.
