@@ -13,11 +13,18 @@ export function unit() {
   return { dpr, n, css: n / dpr };
 }
 
-/** Viewport centre in CSS px, on a whole device pixel (half of an odd width is a half pixel). */
-export function center() {
+/** Viewport centre in device pixels: whole, since half of an odd width is a half pixel. */
+export function centerDev() {
   const { dpr } = unit();
   const root = document.documentElement;
-  return { x: Math.round((root.clientWidth * dpr) / 2) / dpr, y: Math.round((root.clientHeight * dpr) / 2) / dpr };
+  return { x: Math.round((root.clientWidth * dpr) / 2), y: Math.round((root.clientHeight * dpr) / 2) };
+}
+
+/** The same centre in CSS px. */
+export function center() {
+  const { dpr } = unit();
+  const c = centerDev();
+  return { x: c.x / dpr, y: c.y / dpr };
 }
 
 function apply() {

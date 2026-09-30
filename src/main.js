@@ -1,7 +1,7 @@
 import { rand, shuffle, sleep, stepOut } from './anim.js';
 import { darkToLight, hexToRgb, variations } from './color.js';
 import { extractColors } from './extract.js';
-import { CHIPS, cardPng, chipAt, makeGrid, renderCard } from './card.js';
+import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
 import { createCarousel } from './carousel.js';
 import { holdButton } from './hold.js';
 import { center, unit, watchPixelSnap } from './pixel.js';
@@ -16,8 +16,8 @@ const track = $('track');
 
 // Every duration in ms. The shrink is stage.js MORPH_MS, matched by the track transition in CSS.
 const T = {
-  ripple: 2000, unripple: 1400, lockGap: 160, hold: 700,
-  stagger: 200, roam: [2200, 4200], dwell: [300, 560],
+  ripple: 2400, lockGap: 160, hold: 900,
+  stagger: 220, roam: [2600, 4800], dwell: [300, 560],
   chargeToBurst: 1200,
 };
 const MAX_SIDE = 2048; // the working copy of a huge image never exceeds this
@@ -72,22 +72,37 @@ async function compare(stack, slot, candidates, keep) {
 
 const paintCard = (card) => renderCard(card.querySelector('canvas'), card.palette, unit().n, { ui: true });
 
+/** Sizes the card, and the CSS that positions things inside it, for the current viewport. */
+function applyLayout() {
+  fitCardCells();
+  const L = layout(), root = document.documentElement.style;
+  for (const [name, v] of Object.entries({ cw: L.w, ch: L.h, sx: L.chips.x, sy: L.chips.y, nx: L.name.x, ny: L.name.y, nw: L.name.w })) {
+    root.setProperty(`--${name}`, v);
+  }
+}
+
+/** The card's window, centered in the viewport, in CSS px. */
+function cardRect() {
+  const { css } = unit(), L = layout(), c = center();
+  const w = L.w * css, h = L.h * css;
+  return new DOMRect(c.x - w / 2, c.y - h / 2, w, h);
+}
+
 async function analyze(file) {
   if (!idle()) return;
   let work;
   try { work = await load(file); } catch { return; }
   const clusters = extractColors(sample(work), CHIPS);
   if (!clusters.length) return;
-  const cardGrid = makeGrid(work);
 
   try {
     carousel.focus(Infinity, true);
     setStatus('EXPANDING');
-    const bloxels = await stage.open(work, carousel.add.getBoundingClientRect(), unit());
-    work.width = work.height = 0; // the source pixels are spent: bloxels and cardGrid hold all that is kept
+    const bloxels = await stage.open(work, cardRect(), unit(), cardCells());
+    work.width = work.height = 0; // the source pixels are spent: the bloxel grid holds all that is kept
 
     setStatus('ANALYZING');
-    await bloxels.ripple(true, T.ripple);
+    await bloxels.ripple(T.ripple);
 
     const bases = clusters.map((c) => c.hex);
     const slotOf = []; // cluster index -> slot (0 = darkest, bottom)
@@ -110,9 +125,8 @@ async function analyze(file) {
     await Promise.all(clusters.map((_, slot) => sleep(slot * T.lockGap).then(() => stack.lock(slot))));
     await sleep(T.hold);
     await scan.clear();
-    await bloxels.ripple(false, T.unripple);
 
-    const palette = { name: '', colors: [], coordinates: [], grid: cardGrid, copied: -1, createdAt: Date.now() };
+    const palette = { name: '', colors: [], coordinates: [], grid: bloxels.keep(), copied: -1, createdAt: Date.now() };
     clusters.forEach((c, i) => {
       palette.colors[slotOf[i]] = candidates[i][keep[i]];
       palette.coordinates[slotOf[i]] = { x: c.x, y: c.y };
@@ -122,10 +136,9 @@ async function analyze(file) {
     const card = carousel.insert(palette);
     wire(card);
     paintCard(card);
-    const c = center(), w = card.offsetWidth, h = card.offsetHeight;
-    await stage.close(new DOMRect(c.x - w / 2, c.y - h / 2, w, h));
+    await stage.close();
     card.style.visibility = '';
-    // The finished card, drawn to the same pixels as the stack above it, is now underneath.
+    // The finished card is the same blocks and chips, in the same device pixels, so it takes over unseen.
     await Promise.all([stage.fadeOut(), stepOut($('stack-host'), () => $('stack-host').replaceChildren())]);
     card.querySelector('.name').focus({ preventScroll: true });
   } catch (err) {
@@ -239,5 +252,5 @@ addEventListener('drop', (e) => {
 });
 
 document.fonts.load('16px "Stagwood Sprite 64"');
-watchPixelSnap(() => document.querySelectorAll('.card.palette').forEach(paintCard));
+watchPixelSnap(() => { applyLayout(); document.querySelectorAll('.card.palette').forEach(paintCard); });
 setStatus('IDLE');

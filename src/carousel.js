@@ -34,7 +34,7 @@ export function createCarousel(track) {
     insert(palette) {
       const card = document.createElement('div');
       card.className = 'card palette';
-      card.innerHTML = `<canvas></canvas><input class="name" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Palette name"><button class="rm" aria-label="Delete palette">${icon('remove')}</button><button class="dl" aria-label="Export palette">${icon('export')}</button>`;
+      card.innerHTML = `<canvas></canvas><input class="name" name="title" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Title"><button class="rm" aria-label="Delete palette">${icon('remove')}</button><button class="dl" aria-label="Export palette">${icon('export')}</button>`;
       card.palette = palette;
       card.style.visibility = 'hidden';
       track.insertBefore(card, add);

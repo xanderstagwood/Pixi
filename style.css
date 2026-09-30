@@ -26,8 +26,9 @@
   --gray-13: #1B1A19;
   --accent: #BE1425;
 
-  --card-w: calc(320 * var(--px));
-  --card-h: calc(480 * var(--px));
+  /* --cw and --ch (font pixels) are set by main.js's applyLayout from the viewport size. */
+  --card-w: calc(var(--cw, 320) * var(--px));
+  --card-h: calc(var(--ch, 480) * var(--px));
   --gap: calc(2 * var(--px));
   --morph: 600ms; /* keep equal to MORPH_MS in src/stage.js */
   --ease: cubic-bezier(0.645, 0.045, 0.355, 1);
@@ -110,12 +111,12 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 
 .card canvas { display: block; width: var(--card-w); height: var(--card-h); }
 
-/* Sits over the name drawn into the canvas (src/card.js NAME: x 16, y 372, 288 x 32, in a 32px face). */
+/* Sits over the name drawn into the canvas (src/card.js layout().name), in a 32px face. */
 .name {
   position: absolute;
-  left: calc(16 * var(--px));
-  top: calc(372 * var(--px));
-  width: calc(288 * var(--px));
+  left: calc(var(--nx, 16) * var(--px));
+  top: calc(var(--ny, 432) * var(--px));
+  width: calc(var(--nw, 288) * var(--px));
   height: calc(32 * var(--px));
   font-size: calc(32 * var(--px));
   line-height: calc(32 * var(--px));
@@ -179,8 +180,8 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 
 .stack {
   position: absolute;
-  left: calc(var(--cx) - 80 * var(--px));
-  top: calc(var(--cy) - 164 * var(--px));
+  left: calc(var(--cx) - var(--card-w) / 2 + var(--sx, 80) * var(--px));
+  top: calc(var(--cy) - var(--card-h) / 2 + var(--sy, 80) * var(--px));
   width: calc(160 * var(--px));
   display: flex;
   flex-direction: column-reverse; /* slot 0 (darkest) at the bottom */
