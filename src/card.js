@@ -57,7 +57,7 @@ export function textOffset(text, boxWidth, s, size = 16) {
 
 /**
  * @param {HTMLCanvasElement} canvas resized to the card at `s` device px per font pixel
- * @param {{grid: {cols: number, rows: number, rgb: Uint8ClampedArray, cx: number, cy: number}, colors: string[], name: string, copied?: number}} palette colors run darkest first (bottom row)
+ * @param {{grid: {cols: number, rows: number, rgb: Uint8ClampedArray, cx: number, cy: number}, colors: string[], name: string, copied?: number}} palette colors in stack order, bottom row first
  * @param {number} s whole device pixels per font pixel, so every edge and glyph stays crisp
  * @param {{ui?: boolean}} opts ui adds on-screen-only hints (the name placeholder); exports leave them out
  */
@@ -79,7 +79,7 @@ export function renderCard(canvas, palette, s, { ui = false } = {}) {
       if (gc < 0 || gr < 0 || gc >= grid.cols || gr >= grid.rows) continue;
       const i = (gr * grid.cols + gc) * 4;
       g.fillStyle = `rgb(${grid.rgb[i]},${grid.rgb[i + 1]},${grid.rgb[i + 2]})`;
-      g.fillRect(c * cell, r * cell, cell - s, cell - s); // one font pixel between blocks
+      g.fillRect(c * cell + s, r * cell + s, cell - 2 * s, cell - 2 * s); // a font pixel on every side: two between blocks
     }
   }
 
@@ -126,7 +126,7 @@ export function cardPng(palette) {
   return new Promise((done) => c.toBlob(done, 'image/png'));
 }
 
-/** Which chip a click at (x, y) font pixels hits: its index (0 = darkest), or -1. */
+/** Which chip a click at (x, y) font pixels hits: its index (0 = bottom row), or -1. */
 export function chipAt(x, y, count) {
   const { chips } = layout();
   const row = Math.floor((y - chips.y) / chips.pitch);

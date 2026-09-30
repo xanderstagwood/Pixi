@@ -7,7 +7,7 @@ const GROW = 0.14; // share of the sweep a block takes to grow to full size
 const easeOut = (u) => 1 - (1 - u) ** 3;
 
 /**
- * Turns the image on `canvas` into square blocks ("bloxels") with a 1 font pixel gap,
+ * Turns the image on `canvas` into square blocks ("bloxels") with a 2 font pixel gap,
  * growing out of the dark in a wave from the top-left. The canvas is viewport-sized in
  * whole device pixels; the image is contain-fitted and cropped to whole cells.
  *
@@ -30,8 +30,8 @@ export function createBloxels(canvas, source, { dpr, n: unit }, card) {
   const ctx = canvas.getContext('2d');
 
   const cell = CELL_PX * unit;
-  const gap = unit; // one font pixel between neighbouring blocks
-  const full = cell - gap; // a grown block
+  const inset = unit; // one font pixel on every side of a block, so neighbours are two apart
+  const full = cell - 2 * inset; // a grown block
   const mod = (v, m) => ((v % m) + m) % m;
   const c = centerDev();
   // Cell lines through the card window's edges: its width is a whole number of cells.
@@ -76,7 +76,7 @@ export function createBloxels(canvas, source, { dpr, n: unit }, card) {
     ctx.fillStyle = BG;
     ctx.fillRect(x, y, cell, cell);
     if (size <= 0) return;
-    const off = Math.floor((full - size) / 2);
+    const off = inset + Math.floor((full - size) / 2);
     ctx.fillStyle = `rgb(${px[i * 4]},${px[i * 4 + 1]},${px[i * 4 + 2]})`;
     ctx.fillRect(x + off, y + off, size, size);
   };
