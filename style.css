@@ -68,6 +68,8 @@ body {
 .icon--export { --mask: url(icons/export.svg); }
 .icon--remove { --mask: url(icons/remove.svg); }
 .icon--pixi { --mask: url(icons/pixi.svg); }
+.icon--bug { --mask: url(icons/bug.svg); }
+.icon--heart { --mask: url(icons/heart.svg); transform: translateY(calc(var(--icon-px) / -2)); } /* its top row is empty */
 
 /* ---- carousel ---- */
 
@@ -226,6 +228,14 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 #version .tag-icon { width: calc(24 * var(--px)); display: flex; align-items: center; justify-content: center; }
 #version .icon { --icon-px: calc(2 * var(--px)); --icon-color: var(--gray-4); }
 #version .tag-label { display: flex; align-items: center; padding: 0 calc(8 * var(--px)) 0 0; }
+/* The tag's buttons, after Sprite's: faint icons that come up on hover, the heart to the accent. */
+#version .tag-btn { width: calc(24 * var(--px)); display: grid; place-items: center; padding: 0; background: none; border: 0; cursor: pointer; pointer-events: auto; }
+#version .tag-btn .icon { --icon-color: var(--gray-7); }
+#version .tag-btn:hover { background: var(--gray-11); }
+#version .tag-btn:active { background: var(--gray-13); }
+#version .tag-btn:hover .icon, #version .tag-btn:focus-visible .icon { --icon-color: var(--gray-1); }
+#version .tag-btn--heart:hover .icon { --icon-color: var(--accent); }
+#version .tag-btn:focus-visible { outline: calc(2 * var(--px)) solid var(--accent); outline-offset: calc(-2 * var(--px)); }
 
 #scanners { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
 .scanner { position: absolute; left: 0; top: 0; border: calc(2 * var(--px)) solid var(--gray-1); }
