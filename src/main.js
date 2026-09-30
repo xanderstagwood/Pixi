@@ -1,4 +1,4 @@
-import { rand, shuffle, sleep, stepOut } from './anim.js';
+import { rand, shuffle, sleep } from './anim.js';
 import { hexToRgb, stackOrder, variations } from './color.js';
 import { extractColors, lightOnTop } from './extract.js';
 import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
@@ -141,9 +141,11 @@ async function analyze(file) {
     wire(card);
     paintCard(card);
     await stage.close();
+    // The window has closed onto the card exactly, and the card is the same blocks and chips in
+    // the same device pixels, so it takes over in the very frame the stage goes: no fade.
     card.style.visibility = '';
-    // The finished card is the same blocks and chips, in the same device pixels, so it takes over unseen.
-    await Promise.all([stage.fadeOut(), stepOut($('stack-host'), () => $('stack-host').replaceChildren())]);
+    stage.hide();
+    $('stack-host').replaceChildren();
     if (matchMedia('(pointer: fine)').matches) card.querySelector('.name').focus({ preventScroll: true }); // not on touch: it would raise the keyboard
   } catch (err) {
     console.error(err);

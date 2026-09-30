@@ -1,4 +1,4 @@
-import { EASE, stepOut } from './anim.js';
+import { EASE } from './anim.js';
 import { createBloxels } from './bloxel.js';
 
 const MORPH_MS = 600;
@@ -7,9 +7,11 @@ const FULL = 'inset(0px)';
 /**
  * The fullscreen field that opens out of a card and closes back onto it. Only the clip
  * window animates: the bloxels never scale, so the card that is left behind shows them at
- * exactly the size they had while it was analysed.
+ * exactly the size they had while it was analysed. The window wears the card's shadow, so
+ * its edge stays visible on dark images all the way down to the card.
  */
 export function createStage(el, canvas) {
+  const frame = el.parentElement; // hides and shows the stage together with its shadow
   /** clip-path for a window over `rect`, measured against the canvas's own device-pixel size. */
   const clipFor = (rect) => {
     const w = parseFloat(canvas.style.width), h = parseFloat(canvas.style.height);
@@ -34,16 +36,15 @@ export function createStage(el, canvas) {
       rect = at;
       const bloxels = createBloxels(canvas, image, units, card);
       // Sized to the canvas, so every clip edge is a whole device pixel.
-      Object.assign(el.style, { right: 'auto', bottom: 'auto', width: canvas.style.width, height: canvas.style.height });
+      Object.assign(el.style, { width: canvas.style.width, height: canvas.style.height });
       el.style.clipPath = clipFor(rect);
       bloxels.showImage();
-      el.hidden = false;
+      frame.hidden = false;
       await morph(clipFor(rect), FULL);
       return bloxels;
     },
     /** Close the window back down onto the card. */
     close: () => morph(FULL, clipFor(rect)),
-    fadeOut: () => stepOut(el, () => { el.hidden = true; }),
-    hide() { el.hidden = true; },
+    hide() { frame.hidden = true; },
   };
 }

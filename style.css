@@ -173,8 +173,17 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 
 /* ---- analysis stage ---- */
 
-#stage { position: fixed; inset: 0; z-index: 10; overflow: hidden; background: var(--gray-13); }
-#stage[hidden] { display: none; }
+/* The frame carries the card's own shadow: a filter runs before the stage's clip-path, so the
+   shadow has to sit on the parent to follow the shrinking window instead of being clipped away. */
+#stage-frame {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  filter: drop-shadow(0 calc(4 * var(--px)) calc(6 * var(--px)) rgba(0, 0, 0, 0.4));
+}
+#stage-frame[hidden] { display: none; }
+#stage { position: absolute; left: 0; top: 0; overflow: hidden; background: var(--gray-13); }
 #stage canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
 
 #scanners { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
