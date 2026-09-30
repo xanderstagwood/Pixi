@@ -51,7 +51,7 @@ export const cardCells = () => cells;
  */
 export function layout() {
   const w = cells.cols * CELL, h = cells.rows * CELL;
-  const name = { x: 12, y: h - 24, w: 128, h: 16 };
+  const name = { x: 12, y: h - 24, w: 160, h: 16 };
   return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: (h - CHIPS_H) / 2 - CELL / 2 + Math.round(CELL / 3) } };
 }
 

@@ -98,8 +98,8 @@ function cardRect() {
   return new DOMRect(c.x - w / 2, c.y - h / 2, w, h);
 }
 
-/** The first 12 characters of the file's name, without its extension: what a fresh card is called. */
-const defaultName = (file) => file.name.replace(/\.[^.]*$/, '').trim().slice(0, 12);
+/** The first 16 characters of the file's name, without its extension: what a fresh card is called. */
+const defaultName = (file) => file.name.replace(/\.[^.]*$/, '').trim().slice(0, 16);
 
 /** @param {boolean} last no more images are waiting, so the name field may take focus */
 async function analyze(file, last) {

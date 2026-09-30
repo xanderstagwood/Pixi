@@ -44,7 +44,7 @@ function fromStored(o) {
   const rgb = typeof g.rgb === 'string' ? unpack(g.rgb, g.cols * g.rows) : null;
   if (!rgb) return null;
   return {
-    name: o.name.slice(0, 12), colors: o.colors, coordinates: [], copied: -1,
+    name: o.name.slice(0, 30), colors: o.colors, coordinates: [], copied: -1,
     createdAt: Number.isFinite(o.createdAt) ? o.createdAt : Date.now(),
     grid: { cols: g.cols, rows: g.rows, cx: g.cx, cy: g.cy, rgb },
   };
