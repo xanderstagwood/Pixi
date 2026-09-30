@@ -16,17 +16,29 @@ import { classify } from './perceive.js';
 export const TEMPERATURES = ['warm-to-cool', 'cool-to-warm'];
 export const SHADES = ['dark-to-light', 'light-to-dark', 'dark-light-dark', 'light-dark-light'];
 
-const TEMP_TOLERANCE = 0.12; // warmth steps smaller than this read as level
+const TEMP_TOLERANCE = 0.2; // warmth steps smaller than this read as level: a near-black and an indigo are both just cool
 const SHADE_TOLERANCE = 0.04; // so do lightness steps smaller than this
 const PEAK_HEIGHT = 0.06; // a peak or valley must stand this far clear of both ends, or it is just a slope
-const WEIGHT = { temperature: 1, shade: 0.8 }; // warmth leads a little, as the owner asked
+const WEIGHT = { temperature: 1, shade: 0.9 }; // warmth leads a little, as the owner asked; shade takes over where warmth is level
 const ZIGZAG = 0.25; // among orders that fit equally, prefer the one closest to a clean sort
+// A gradient should not lurch: big steps between neighbours cost, squared, so two colors that are level
+// on temperature go in whichever order makes the gentler run of lightness. Lightness lurches are what
+// an eye notices most, so it counts for more than warmth.
+const SMOOTH = { temperature: 0.1, shade: 1.5 };
+const CLOSE = 0.2; // colors whose warmth differs by less than this are level, so the order between them may follow the gradient
 const NEAR_TIE = 0.05; // combinations this close to the best are all "about as good": one is picked at random
 
 /** Steps that go against `dir` (+1 rising, -1 falling), beyond the tolerance. */
 function against(x, dir, tolerance, from = 0, to = x.length - 1) {
   let sum = 0;
   for (let k = from; k < to; k++) sum += Math.max(0, -dir * (x[k + 1] - x[k]) - tolerance);
+  return sum;
+}
+
+/** Sum of squared steps: small when neighbours are close, and evenest for a given span when the steps are equal. */
+function lurch(x) {
+  let sum = 0;
+  for (let k = 0; k < x.length - 1; k++) sum += (x[k + 1] - x[k]) ** 2;
   return sum;
 }
 
@@ -40,14 +52,15 @@ function zigzag(x) {
 /** Cost of a run of warmth values for a temperature pattern; 0 is a perfect fit. */
 export function temperatureCost(w, pattern) {
   const dir = pattern === 'cool-to-warm' ? 1 : -1;
-  return against(w, dir, TEMP_TOLERANCE) + ZIGZAG * zigzag(w);
+  return against(w, dir, TEMP_TOLERANCE) + ZIGZAG * zigzag(w) + SMOOTH.temperature * lurch(w);
 }
 
 /** Cost of a run of lightness values for a shade pattern; 0 is a perfect fit. */
 export function shadeCost(s, pattern) {
   const n = s.length;
-  if (pattern === 'dark-to-light') return against(s, 1, SHADE_TOLERANCE) + ZIGZAG * zigzag(s);
-  if (pattern === 'light-to-dark') return against(s, -1, SHADE_TOLERANCE) + ZIGZAG * zigzag(s);
+  const smooth = SMOOTH.shade * lurch(s);
+  if (pattern === 'dark-to-light') return against(s, 1, SHADE_TOLERANCE) + ZIGZAG * zigzag(s) + smooth;
+  if (pattern === 'light-to-dark') return against(s, -1, SHADE_TOLERANCE) + ZIGZAG * zigzag(s) + smooth;
   const up = pattern === 'dark-light-dark'; // rises to a peak, then falls; the other one dips to a valley
   let best = Infinity;
   for (let p = 1; p < n - 1; p++) { // the turning point sits inside the run
@@ -57,7 +70,7 @@ export function shadeCost(s, pattern) {
     const cost = first + second + Math.max(0, PEAK_HEIGHT - clear);
     if (cost < best) best = cost;
   }
-  return best;
+  return best + smooth;
 }
 
 /** Every order of 0..n-1. */
@@ -85,6 +98,25 @@ export function patternCost(hexes, temperature, shade) {
 }
 
 /**
+ * A last look at neighbours. Two colors that are level on temperature can go either way round without
+ * breaking the temperature pattern, so if swapping them makes the run of lightness smoother, they swap.
+ * (A near-black and an indigo, both simply cool, should not send the shade dipping and springing back.)
+ */
+function polish(order, w, s) {
+  const o = [...order];
+  for (let pass = 0, moved = true; moved && pass < 20; pass++) {
+    moved = false;
+    for (let k = 0; k < o.length - 1; k++) {
+      if (Math.abs(w[o[k]] - w[o[k + 1]]) >= CLOSE) continue;
+      const swapped = [...o];
+      [swapped[k], swapped[k + 1]] = [swapped[k + 1], swapped[k]];
+      if (lurch(swapped.map((i) => s[i])) < lurch(o.map((i) => s[i])) - 0.005) { o.splice(0, o.length, ...swapped); moved = true; }
+    }
+  }
+  return o;
+}
+
+/**
  * Chooses the temperature pattern, the shade pattern and the order that fits them best.
  * @param {string[]} hexes
  * @param {() => number} random breaks near-ties, so the same palette can be presented in more than one good way
@@ -108,7 +140,13 @@ export function arrange(hexes, random = Math.random) {
   }
   const lowest = Math.min(...found.map((f) => f.cost));
   const close = found.filter((f) => f.cost <= lowest + NEAR_TIE);
-  return close[Math.floor(random() * close.length)];
+  const pick = close[Math.floor(random() * close.length)];
+  // Polishing can change which shade pattern the order now fits, so name the one it fits best.
+  const order = polish(pick.order, w, s);
+  const run = order.map((i) => s[i]);
+  const shade = SHADES.reduce((a, b) => (shadeCost(run, b) < shadeCost(run, a) ? b : a));
+  const cost = WEIGHT.temperature * temperatureCost(order.map((i) => w[i]), pick.temperature) + WEIGHT.shade * shadeCost(run, shade);
+  return { order, temperature: pick.temperature, shade, cost };
 }
 
 const lab = (hex) => rgbToOklab(hexToRgb(hex));

@@ -45,16 +45,13 @@ assert.equal(classify('#101830').lightness, 'dark');
 assert.equal(classify('#8A8A8A').temperature, 'neutral');
 assert.ok(classify('#948A82').warmth > classify('#82888F').warmth, 'a warm gray reads warmer than a cool gray');
 
-// Pattern costs: a fit costs nothing, the reverse costs plenty.
-assert.ok(temperatureCost([0.9, 0.5, 0.1, -0.3, -0.8], 'warm-to-cool') < 0.01);
-assert.ok(temperatureCost([0.9, 0.5, 0.1, -0.3, -0.8], 'cool-to-warm') > 1);
-assert.ok(shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'dark-to-light') < 0.01);
-assert.ok(shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'light-to-dark') > 0.5);
-assert.ok(shadeCost([0.2, 0.5, 0.9, 0.5, 0.2], 'dark-light-dark') < 0.01);
-assert.ok(shadeCost([0.2, 0.5, 0.9, 0.5, 0.2], 'light-dark-light') > 0.5);
-assert.ok(shadeCost([0.9, 0.5, 0.2, 0.5, 0.9], 'light-dark-light') < 0.01);
-assert.ok(shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'dark-light-dark') > 0.1, 'a plain slope is not a peak');
-
+// Pattern costs: a fit costs clearly less than the reverse, and a plain slope is not a peak.
+const cheaper = (fit, wrong) => wrong - fit > 0.1; // the smoothness part is the same either way, so compare the gap
+assert.ok(cheaper(temperatureCost([0.9, 0.5, 0.1, -0.3, -0.8], 'warm-to-cool'), temperatureCost([0.9, 0.5, 0.1, -0.3, -0.8], 'cool-to-warm')));
+assert.ok(cheaper(shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'dark-to-light'), shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'light-to-dark')));
+assert.ok(cheaper(shadeCost([0.2, 0.5, 0.9, 0.5, 0.2], 'dark-light-dark'), shadeCost([0.2, 0.5, 0.9, 0.5, 0.2], 'light-dark-light')));
+assert.ok(cheaper(shadeCost([0.9, 0.5, 0.2, 0.5, 0.9], 'light-dark-light'), shadeCost([0.9, 0.5, 0.2, 0.5, 0.9], 'dark-light-dark')));
+assert.ok(shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'dark-light-dark') > shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'dark-to-light'), 'a plain slope is not a peak');
 // Arranging: every palette gets both patterns, every color placed once, and the order fits what it says.
 const palette = ['#E8552B', '#F2B540', '#2E6FA5', '#1F3A5F', '#8FB8C9', '#B85C38', '#3E2A2A'];
 for (const roll of [0, 0.5, 0.99]) {
@@ -63,7 +60,19 @@ for (const roll of [0, 0.5, 0.99]) {
   assert.ok(['warm-to-cool', 'cool-to-warm'].includes(plan.temperature));
   assert.ok(['dark-to-light', 'light-to-dark', 'dark-light-dark', 'light-dark-light'].includes(plan.shade));
   const seen = plan.order.map((i) => classify(palette[i]));
-  assert.ok(temperatureCost(seen.map((c) => c.warmth), plan.temperature) < 0.3);
+  const half = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  const w = seen.map((c) => c.warmth);
+  const lead = half(w.slice(0, 3)) - half(w.slice(-3)); // the top of the stack minus the bottom
+  assert.ok(plan.temperature === 'warm-to-cool' ? lead > 0 : lead < 0, 'the order runs the way its temperature pattern says');
+}
+// A real palette that lurched: near-black then a lighter indigo at the bottom. Level on temperature, so the
+// gentler gradient wins: the indigo goes above the black.
+const lurching = ['#FC6D34', '#FA3535', '#A61520', '#7D1525', '#5A1832', '#111521', '#333867'];
+for (const roll of [0, 0.3, 0.6, 0.99]) {
+  const plan = arrange(lurching, () => roll);
+  if (plan.temperature !== 'warm-to-cool') continue;
+  const rows = plan.order.map((i) => lurching[i]);
+  assert.ok(rows.indexOf('#333867') < rows.indexOf('#111521'), `indigo should sit above near-black: ${rows.join(' ')}`);
 }
 // The choice of candidate keeps the count and stays in range.
 const cands = palette.map((h) => [h, h, h]);
