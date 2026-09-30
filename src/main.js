@@ -1,6 +1,6 @@
 import { rand, shuffle, sleep, stepOut } from './anim.js';
 import { darkToLight, hexToRgb, variations } from './color.js';
-import { extractColors } from './extract.js';
+import { extractColors, lightOnTop } from './extract.js';
 import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
 import { createCarousel } from './carousel.js';
 import { holdButton } from './hold.js';
@@ -93,8 +93,10 @@ async function analyze(file) {
   if (!idle()) return;
   let work;
   try { work = await load(file); } catch { return; }
-  const clusters = extractColors(sample(work), CHIPS);
+  const pixels = sample(work);
+  const clusters = extractColors(pixels, CHIPS);
   if (!clusters.length) return;
+  const lightAtTop = lightOnTop(pixels);
 
   try {
     carousel.focus(Infinity, true);
@@ -106,8 +108,10 @@ async function analyze(file) {
     await bloxels.ripple(T.ripple);
 
     const bases = clusters.map((c) => c.hex);
-    const slotOf = []; // cluster index -> slot (0 = darkest, bottom)
-    darkToLight(bases).forEach((cluster, slot) => { slotOf[cluster] = slot; });
+    const slotOf = []; // cluster index -> slot (0 = bottom row)
+    const ramp = darkToLight(bases); // darkest first: light ends up on top...
+    if (!lightAtTop) ramp.reverse(); // ...unless the picture is darker at the top
+    ramp.forEach((cluster, slot) => { slotOf[cluster] = slot; });
     const candidates = bases.map(variations);
     const keep = choose(candidates);
 

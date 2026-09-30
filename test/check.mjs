@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { crc32 as nodeCrc } from 'node:zlib';
 import { darkToLight, mix, variations, hexToHsl } from '../src/color.js';
-import { extractColors } from '../src/extract.js';
+import { extractColors, lightOnTop } from '../src/extract.js';
 import * as f from '../src/export/formats.js';
 import { zip } from '../src/export/zip.js';
 
@@ -23,6 +23,15 @@ for (let i = 0; i < w * h; i++) data.set(i % w < 10 ? [255, 0, 0, 255] : [0, 0, 
 const got = extractColors({ data, width: w, height: h }, 2);
 assert.deepEqual(got.map((c) => c.hex).sort(), ['#0000FF', '#FF0000']);
 assert.ok(got.find((c) => c.hex === '#FF0000').x < 0.5 && got.find((c) => c.hex === '#0000FF').x > 0.5);
+
+// The stack follows the picture: light over dark reads as light on top, the reverse as dark on top.
+const tall = (topL, botL) => {
+  const d = new Uint8ClampedArray(4 * 4 * 4);
+  for (let i = 0; i < 16; i++) d.set(i < 8 ? [topL, topL, topL, 255] : [botL, botL, botL, 255], i * 4);
+  return { data: d, width: 4, height: 4 };
+};
+assert.equal(lightOnTop(tall(230, 20)), true);
+assert.equal(lightOnTop(tall(20, 230)), false);
 
 // Binary format headers and sizes.
 const cols = ['#0000FF', '#808080', '#FF7F00'];

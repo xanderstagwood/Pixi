@@ -1,6 +1,6 @@
 import { hexToRgb, hexToHsl } from '../color.js';
 
-// Pure encoders: hex array (coolest first) in, text or bytes out. No DOM, so they run under node.
+// Pure encoders: hex array (in stack order) in, text or bytes out. No DOM, so they run under node.
 
 const rgb = (hex) => { const { r, g, b } = hexToRgb(hex); return `${r} ${g} ${b}`; };
 const bare = (hex) => hex.slice(1);

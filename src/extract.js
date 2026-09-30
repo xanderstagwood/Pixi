@@ -54,3 +54,20 @@ export function extractColors({ data, width, height }, k = 7, iterations = 12) {
     };
   });
 }
+
+/**
+ * Whether the top half of the image is lighter than the bottom half: a light sky over dark
+ * ground, or the reverse. The palette stack mirrors it, so it fits the picture's own vibe.
+ * @param {{data: Uint8ClampedArray, width: number, height: number}} img
+ */
+export function lightOnTop({ data, width, height }) {
+  let top = 0, bottom = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const l = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+      if (y < height / 2) top += l; else bottom += l;
+    }
+  }
+  return top >= bottom;
+}

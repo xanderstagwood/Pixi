@@ -19,7 +19,7 @@ const chip = (hex, label = hex) => {
 };
 
 /**
- * A vertical stack of color slots. Slot 0 is the coolest and sits at the bottom
+ * A vertical stack of color slots. Slot 0 sits at the bottom
  * (column-reverse), so index order matches the palette array.
  * @returns {{el: HTMLElement, swapTo: (i: number, hex: string) => Promise<void>, lock: (i: number) => Promise<void>}}
  */
