@@ -8,9 +8,8 @@ import { unit } from './pixel.js';
 
 export const CELL = 16; // font pixels per bloxel
 export const CHIPS = 7;
-// Every chip edge should stop halfway through a bloxel, never line up with one. Across: 9
-// bloxels wide on a card an even number wide. Down: two bloxels tall on a whole-bloxel
-// pitch, started half a bloxel in (see layout).
+// The chips' left and right edges stop halfway through a bloxel, never lining up with one: 9
+// bloxels wide on a card an even number wide. Vertically they are centered to the pixel instead.
 const CHIP = { w: 144, h: 32, pitch: 48 };
 export const CHIP_W = CHIP.w;
 const CHIPS_H = (CHIPS - 1) * CHIP.pitch + CHIP.h;
@@ -46,14 +45,14 @@ export const cardCells = () => cells;
 
 /**
  * Positions inside the card, in font pixels. A footer line runs along the bottom (the name at the left,
- * the credit at the right), and the chips sit above it, as near the middle as a half-bloxel start allows.
+ * the credit at the right). The chips sit exactly in the middle of the card, with the same breathing
+ * room above as below; the block and the card are both whole font pixels, so the middle is too. Sideways
+ * they stay half a bloxel off the bloxel lines (see CHIP).
  */
 export function layout() {
   const w = cells.cols * CELL, h = cells.rows * CELL;
   const name = { x: 12, y: h - 24, w: 128, h: 16 };
-  const half = CELL / 2;
-  const top = half + CELL * Math.max(0, Math.round(((name.y - CHIPS_H) / 2 - half) / CELL));
-  return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: top } };
+  return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: (h - CHIPS_H) / 2 } };
 }
 
 const measure = document.createElement('canvas').getContext('2d');
