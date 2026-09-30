@@ -1,5 +1,5 @@
 import { rand, sleep } from './anim.js';
-import { arrange, decide } from './arrange.js';
+import { arrange, decide, fit, turnsOnMiddle } from './arrange.js';
 import { hexToRgb, sequence, variations } from './color.js';
 import { extractColors } from './extract.js';
 import { createQueue } from './queue.js';
@@ -29,6 +29,7 @@ const MAX_SIDE = 2048; // the working copy of a huge image never exceeds this
 // Limits on what is accepted at all, so five huge files cannot strain a phone or a small laptop.
 const MAX_BYTES = 25 * 1024 * 1024; // per file, so at most 225MB in a batch
 const MAX_PIXELS = 64e6; // 8000 x 8000
+const POOL = 12; // colors of a picture drawn on when a pattern needs the seven to be fitted (arrange.js fit)
 
 const app = { status: 'IDLE' };
 const setStatus = (s) => { app.status = s; document.body.dataset.status = s; };
@@ -106,8 +107,22 @@ async function analyze(file, last) {
   let work;
   try { work = await load(file); } catch { return; }
   const pixels = sample(work);
-  const clusters = extractColors(pixels, CHIPS);
+  let clusters = extractColors(pixels, CHIPS);
   if (!clusters.length) return;
+
+  // Everything about the palette is settled before anything moves, so the run itself never hitches.
+  // Every palette gets a temperature pattern and a shade pattern together (arrange.js). A shade pattern
+  // that turns needs colors that support it, so those are fitted to it from a larger pool. Then each color
+  // keeps whichever of its five candidates makes the order fit its patterns best (decide).
+  let arrangement = arrange(clusters.map((c) => c.hex));
+  if (turnsOnMiddle(arrangement.shade)) {
+    ({ colors: clusters, arrangement } = fit(clusters, extractColors(pixels, POOL), arrangement));
+  }
+  const bases = clusters.map((c) => c.hex);
+  const candidates = bases.map(variations);
+  const keep = decide(candidates, arrangement);
+  const slotOf = []; // cluster index -> slot (0 = bottom row); the arrangement lists the top row first
+  arrangement.order.forEach((cluster, row) => { slotOf[cluster] = CHIPS - 1 - row; });
 
   session = { scan: null };
   try {
@@ -119,15 +134,6 @@ async function analyze(file, last) {
 
     setStatus('ANALYZING');
     await bloxels.ripple(T.ripple);
-
-    // Every palette gets a temperature pattern and a shade pattern together (arrange.js), then each
-    // color keeps whichever of its five candidates makes the order fit its patterns best (decide).
-    const bases = clusters.map((c) => c.hex);
-    const candidates = bases.map(variations);
-    const arrangement = arrange(bases);
-    const keep = decide(candidates, arrangement);
-    const slotOf = []; // cluster index -> slot (0 = bottom row); the plan lists the top row first
-    arrangement.order.forEach((cluster, row) => { slotOf[cluster] = CHIPS - 1 - row; });
 
     const stack = createStack(CHIPS);
     $('stack-host').append(stack.el);

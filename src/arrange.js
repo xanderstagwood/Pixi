@@ -3,7 +3,9 @@ import { deltaE, rgbToOklab } from './oklab.js';
 import { classify } from './perceive.js';
 
 // Putting a palette in order the way an eye would. Every palette gets one temperature pattern and
-// one shade pattern, both at once:
+// one shade pattern, both at once. The two patterns that turn (dark-light-dark and light-dark-light)
+// turn on the middle chip, never the second or the next to last, and that chip is the lightest or the
+// darkest color of the seven:
 //
 //   temperature   warm to cool, or cool to warm                                 (read top to bottom)
 //   shade         dark to light, light to dark, dark-light-dark, light-dark-light
@@ -18,7 +20,8 @@ export const SHADES = ['dark-to-light', 'light-to-dark', 'dark-light-dark', 'lig
 
 const TEMP_TOLERANCE = 0.2; // warmth steps smaller than this read as level: a near-black and an indigo are both just cool
 const SHADE_TOLERANCE = 0.04; // so do lightness steps smaller than this
-const PEAK_HEIGHT = 0.06; // a peak or valley must stand this far clear of both ends, or it is just a slope
+const NOT_ALLOWED = 1e6; // the cost of breaking a rule that has no exceptions
+const PEAK_HEIGHT = 0.06; // a peak or valley must stand this far clear of every other chip, or it is just a slope
 const WEIGHT = { temperature: 1, shade: 0.9 }; // warmth leads a little, as the owner asked; shade takes over where warmth is level
 const ZIGZAG = 0.25; // among orders that fit equally, prefer the one closest to a clean sort
 // A gradient should not lurch: big steps between neighbours cost, squared, so two colors that are level
@@ -61,17 +64,19 @@ export function shadeCost(s, pattern) {
   const smooth = SMOOTH.shade * lurch(s);
   if (pattern === 'dark-to-light') return against(s, 1, SHADE_TOLERANCE) + ZIGZAG * zigzag(s) + smooth;
   if (pattern === 'light-to-dark') return against(s, -1, SHADE_TOLERANCE) + ZIGZAG * zigzag(s) + smooth;
+  // The turning chip is the middle one, and it stands clear of every other chip.
   const up = pattern === 'dark-light-dark'; // rises to a peak, then falls; the other one dips to a valley
-  let best = Infinity;
-  for (let p = 1; p < n - 1; p++) { // the turning point sits inside the run
-    const first = against(s, up ? 1 : -1, SHADE_TOLERANCE, 0, p);
-    const second = against(s, up ? -1 : 1, SHADE_TOLERANCE, p, n - 1);
-    const clear = up ? s[p] - Math.max(s[0], s[n - 1]) : Math.min(s[0], s[n - 1]) - s[p];
-    const cost = first + second + Math.max(0, PEAK_HEIGHT - clear);
-    if (cost < best) best = cost;
-  }
-  return best + smooth;
+  const p = middleOf(n);
+  const first = against(s, up ? 1 : -1, SHADE_TOLERANCE, 0, p);
+  const second = against(s, up ? -1 : 1, SHADE_TOLERANCE, p, n - 1);
+  const rest = s.filter((_, i) => i !== p);
+  const clear = up ? s[p] - Math.max(...rest) : Math.min(...rest) - s[p];
+  if (clear < 0) return NOT_ALLOWED; // the middle chip must be the lightest (or darkest) of all: no exceptions
+  return first + second + Math.max(0, PEAK_HEIGHT - clear) + smooth;
 }
+
+/** The index of the middle chip: 3 of 0-6. */
+const middleOf = (n) => (n - 1) >> 1;
 
 /** Every order of 0..n-1. */
 function permutations(n) {
@@ -86,6 +91,35 @@ function permutations(n) {
 
 const orders = new Map(); // n -> every order of n things, made once
 const ordersOf = (n) => { if (!orders.has(n)) orders.set(n, permutations(n)); return orders.get(n); };
+const centered = new Map();
+/** Every order of n things with thing `c` in the middle: 720 of 5,040 for seven. */
+function ordersCentered(n, c) {
+  const key = `${n}:${c}`;
+  if (!centered.has(key)) centered.set(key, ordersOf(n).filter((perm) => perm[middleOf(n)] === c));
+  return centered.get(key);
+}
+const turns = (shade) => shade === 'dark-light-dark' || shade === 'light-dark-light';
+
+/**
+ * The best order of colors with these warmths `w` and lightnesses `s` for one pair of patterns. A pattern
+ * that turns puts the lightest (or darkest) color in the middle, so only orders that do are worth trying.
+ */
+function bestOrder(w, s, temperature, shade) {
+  let perms = ordersOf(w.length);
+  if (turns(shade)) {
+    const up = shade === 'dark-light-dark';
+    let extreme = 0;
+    s.forEach((v, i) => { if (up ? v > s[extreme] : v < s[extreme]) extreme = i; });
+    perms = ordersCentered(w.length, extreme);
+  }
+  let best = Infinity, order = null;
+  for (const perm of perms) {
+    const cost = WEIGHT.temperature * temperatureCost(perm.map((i) => w[i]), temperature)
+      + WEIGHT.shade * shadeCost(perm.map((i) => s[i]), shade);
+    if (cost < best) { best = cost; order = perm; }
+  }
+  return { order, cost: best };
+}
 
 /** Warmth and lightness for each color, as an eye judges them. */
 const judge = (hexes) => hexes.map(classify);
@@ -102,12 +136,12 @@ export function patternCost(hexes, temperature, shade) {
  * breaking the temperature pattern, so if swapping them makes the run of lightness smoother, they swap.
  * (A near-black and an indigo, both simply cool, should not send the shade dipping and springing back.)
  */
-function polish(order, w, s) {
+function polish(order, w, s, pinned = -1) {
   const o = [...order];
   for (let pass = 0, moved = true; moved && pass < 20; pass++) {
     moved = false;
     for (let k = 0; k < o.length - 1; k++) {
-      if (Math.abs(w[o[k]] - w[o[k + 1]]) >= CLOSE) continue;
+      if (k === pinned || k + 1 === pinned || Math.abs(w[o[k]] - w[o[k + 1]]) >= CLOSE) continue; // the turning chip stays put
       const swapped = [...o];
       [swapped[k], swapped[k + 1]] = [swapped[k + 1], swapped[k]];
       if (lurch(swapped.map((i) => s[i])) < lurch(o.map((i) => s[i])) - 0.005) { o.splice(0, o.length, ...swapped); moved = true; }
@@ -125,29 +159,60 @@ function polish(order, w, s) {
 export function arrange(hexes, random = Math.random) {
   const seen = judge(hexes);
   const w = seen.map((c) => c.warmth), s = seen.map((c) => c.shade);
-  const perms = ordersOf(hexes.length);
   const found = [];
   for (const temperature of TEMPERATURES) {
-    for (const shade of SHADES) {
-      let best = Infinity, order = null;
-      for (const perm of perms) {
-        const cost = WEIGHT.temperature * temperatureCost(perm.map((i) => w[i]), temperature)
-          + WEIGHT.shade * shadeCost(perm.map((i) => s[i]), shade);
-        if (cost < best) { best = cost; order = perm; }
-      }
-      found.push({ order, temperature, shade, cost: best });
-    }
+    for (const shade of SHADES) found.push({ ...bestOrder(w, s, temperature, shade), temperature, shade });
   }
   const lowest = Math.min(...found.map((f) => f.cost));
   const close = found.filter((f) => f.cost <= lowest + NEAR_TIE);
   const pick = close[Math.floor(random() * close.length)];
   // Polishing can change which shade pattern the order now fits, so name the one it fits best.
-  const order = polish(pick.order, w, s);
+  const order = polish(pick.order, w, s, turns(pick.shade) ? middleOf(hexes.length) : -1);
   const run = order.map((i) => s[i]);
   const shade = SHADES.reduce((a, b) => (shadeCost(run, b) < shadeCost(run, a) ? b : a));
   const cost = WEIGHT.temperature * temperatureCost(order.map((i) => w[i]), pick.temperature) + WEIGHT.shade * shadeCost(run, shade);
   return { order, temperature: pick.temperature, shade, cost };
 }
+
+const MAX_SWAPS = 2; // fitting changes at most this many of the seven, so the palette stays the picture's
+const MIN_GAIN = 0.03; // and only for a clear improvement
+
+/**
+ * Picks the colors to fit a pattern that has already been chosen. A pattern that turns needs a clear
+ * lightest (or darkest) color for its middle and colors that step away from it on both sides; when the
+ * seven do not give that, up to two are swapped for colors of the same picture from a larger pool, keeping
+ * a swap only if the order then fits its patterns clearly better.
+ * @param {{hex: string}[]} chosen the seven, as picked from the picture
+ * @param {{hex: string}[]} pool more colors of the same picture to draw on
+ * @param {{temperature: string, shade: string}} plan the patterns from `arrange`
+ * @returns {{colors: {hex: string}[], arrangement: {order: number[], temperature: string, shade: string, cost: number}}}
+ */
+export function fit(chosen, pool, plan) {
+  const { temperature, shade } = plan;
+  const measure = (colors) => {
+    const seen = colors.map((c) => classify(c.hex));
+    const found = bestOrder(seen.map((c) => c.warmth), seen.map((c) => c.shade), temperature, shade);
+    return { ...found, seen };
+  };
+  let colors = [...chosen];
+  let best = measure(colors);
+  for (let swaps = 0, pass = 0, improved = true; improved && swaps < MAX_SWAPS && pass < 3; pass++) {
+    improved = false;
+    for (let j = 0; j < colors.length && swaps < MAX_SWAPS; j++) {
+      for (const candidate of pool) {
+        if (colors.some((c) => c.hex === candidate.hex)) continue;
+        const trial = [...colors];
+        trial[j] = candidate;
+        const tried = measure(trial);
+        if (tried.cost < best.cost - MIN_GAIN) { colors = trial; best = tried; improved = true; swaps++; break; }
+      }
+    }
+  }
+  return { colors, arrangement: { order: best.order, temperature, shade, cost: best.cost } };
+}
+
+/** Whether a shade pattern is one of the two that turn. */
+export const turnsOnMiddle = turns;
 
 const lab = (hex) => rgbToOklab(hexToRgb(hex));
 
