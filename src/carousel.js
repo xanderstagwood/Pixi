@@ -7,14 +7,16 @@ const icon = (name) => `<span class="icon icon--${name}"></span>`;
  * sit either side. The blank "+" card is always last. Focus moves by setting --i on the
  * track and letting CSS transition the transform.
  * @param {HTMLElement} track
+ * @param {() => void} onFocus called whenever focus moves, so cards can redraw as centered or not
  */
-export function createCarousel(track) {
+export function createCarousel(track, onFocus = () => {}) {
   const add = document.createElement('div');
   add.className = 'card add';
   add.innerHTML = icon('new');
   track.append(add);
 
   let index = 0;
+  let ready = false; // the first focus is setup, before anyone is listening
   const cards = () => [...track.children];
   const focus = (i, instant = false) => {
     index = Math.max(0, Math.min(cards().length - 1, i));
@@ -22,8 +24,10 @@ export function createCarousel(track) {
     track.style.setProperty('--i', index);
     cards().forEach((c, k) => c.classList.toggle('focus', k === index));
     if (instant) { track.getBoundingClientRect(); track.classList.remove('instant'); }
+    if (ready) onFocus();
   };
   focus(0, true);
+  ready = true;
 
   return {
     add,

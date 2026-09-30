@@ -114,7 +114,7 @@ body.vertical #track {
   cursor: pointer;
   transition: opacity 300ms;
 }
-.card:not(.focus) { opacity: 0.5; }
+.card.add:not(.focus) { opacity: 0.5; } /* palette cards dim inside their canvas instead, so the name keeps its color */
 .card.palette { box-shadow: 0 calc(4 * var(--px)) calc(12 * var(--px)) rgba(0, 0, 0, 0.4); }
 .card.dragging { opacity: 0.4; }
 /* Reorder ghost: follows the pointer, offset set inline by src/reorder.js. */

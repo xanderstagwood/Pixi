@@ -31,7 +31,7 @@ const idle = () => app.status === 'IDLE' || app.status === 'CAROUSEL';
 // The analysis in flight, if any: what a change of viewport has to lay out again.
 let session = null;
 
-const carousel = createCarousel(track);
+const carousel = createCarousel(track, () => repaint());
 const stage = createStage($('stage'), $('stage').querySelector('canvas'));
 
 /**
@@ -66,7 +66,7 @@ function sample(work, max = 200) {
   return g.getImageData(0, 0, w, h);
 }
 
-const paintCard = (card) => renderCard(card.querySelector('canvas'), card.palette, unit().n, { ui: true });
+const paintCard = (card) => renderCard(card.querySelector('canvas'), card.palette, unit().n, { ui: true, dim: !card.classList.contains('focus') });
 
 /** Sizes the card, and the CSS that positions things inside it, for the current viewport. */
 function applyLayout() {

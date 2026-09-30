@@ -67,9 +67,10 @@ export function textOffset(text, boxWidth, s, size = 16) {
  * @param {HTMLCanvasElement} canvas resized to the card at `s` device px per font pixel
  * @param {{grid: {cols: number, rows: number, rgb: Uint8ClampedArray, cx: number, cy: number}, colors: string[], name: string, copied?: number}} palette colors in stack order, bottom row first
  * @param {number} s whole device pixels per font pixel, so every edge and glyph stays crisp
- * @param {{ui?: boolean}} opts ui adds on-screen-only hints (the name placeholder); exports leave them out
+ * @param {{ui?: boolean, dim?: boolean}} opts ui adds on-screen-only hints (the name placeholder); exports leave
+ *        them out. dim veils the blocks and chips (a card that is not in the center) but never the name
  */
-export function renderCard(canvas, palette, s, { ui = false } = {}) {
+export function renderCard(canvas, palette, s, { ui = false, dim = false } = {}) {
   const L = layout();
   canvas.width = L.w * s;
   canvas.height = L.h * s;
@@ -117,6 +118,11 @@ export function renderCard(canvas, palette, s, { ui = false } = {}) {
 
   const n = palette.colors.length;
   palette.colors.forEach((hex, i) => chip(n - 1 - i, hex, palette.copied === i ? 'COPIED' : hex));
+
+  if (dim) { // a veil of the ground color, laid before the name so the name is the same color on every card
+    g.fillStyle = 'rgba(27, 26, 25, 0.5)';
+    g.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   // The name floats over the blocks, a size up. Its shadow is soft but heavy: drawn twice so the
   // blur is dense enough to separate it from light blocks without a hard edge.
