@@ -165,9 +165,9 @@ export function createBloxels(canvas, source, cardCells) {
     /** Let go of the private copy of the image. */
     release() { twinkle.halt(); img.width = img.height = 0; },
     /** Blocks grow out of the dark in a wave from the top-left. */
-    ripple(ms) {
+    async ripple(ms) {
       done = 0;
-      return frames((t) => {
+      await frames((t) => {
         front = t / ms;
         for (let j = done; j < g.count && when(g.order[j]) <= front; j++) paintCell(g.order[j]);
         while (done < g.count && front - when(g.order[done]) >= GROW) done++;
@@ -175,6 +175,11 @@ export function createBloxels(canvas, source, cardCells) {
         front = Infinity;
         return true;
       });
+      if (front === Infinity) return;
+      // Cut short because the tab was left: finish the wave at once, so the grid is whole if the tab comes back.
+      front = Infinity;
+      done = g.count;
+      g.order.forEach(paintCell);
     },
   };
 }

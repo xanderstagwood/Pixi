@@ -1,4 +1,4 @@
-import { EASE_OUT } from './anim.js';
+import { EASE_OUT, unlessAway } from './anim.js';
 import { CHIP_HIT, CHIP_W, textOffset } from './card.js';
 import { brighter, inkFor } from './color.js';
 import { unit } from './pixel.js';
@@ -43,7 +43,7 @@ export function createStack(n = 7) {
     const slide = (from, to) => [{ transform: `translateY(${from}%)` }, { transform: `translateY(${to}%)` }];
     const opts = { duration: SLIDE_MS, easing: EASE_OUT, fill: 'both' };
     next.animate(slide(100, 0), opts);
-    await prev.animate(slide(0, -100), opts).finished;
+    await unlessAway(prev.animate(slide(0, -100), opts).finished);
     prev.remove();
   }
 
@@ -52,7 +52,7 @@ export function createStack(n = 7) {
     const flash = document.createElement('div');
     flash.className = 'flash';
     slots[i].append(flash);
-    await flash.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 360, easing: 'steps(3)' }).finished;
+    await unlessAway(flash.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 360, easing: 'steps(3)' }).finished);
     flash.remove();
   }
 

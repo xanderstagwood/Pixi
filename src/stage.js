@@ -1,4 +1,4 @@
-import { EASE } from './anim.js';
+import { EASE, unlessAway } from './anim.js';
 import { createBloxels } from './bloxel.js';
 
 const MORPH_MS = 600;
@@ -21,7 +21,7 @@ export function createStage(el, canvas) {
   async function morph(from, to) {
     // fill: both holds the last frame until the inline style catches up, so nothing flickers.
     const run = el.animate([{ clipPath: from }, { clipPath: to }], { duration: MORPH_MS, easing: EASE, fill: 'both' });
-    await run.finished;
+    await unlessAway(run.finished);
     el.style.clipPath = to;
     run.cancel();
   }
