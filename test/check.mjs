@@ -68,11 +68,13 @@ const q = createQueue(async (x, left) => {
   seen.push(`${x}:${left}`);
   active--;
   if (x === 'b') throw new Error('boom');
-}, { onError: () => {} });
+}, { onError: () => {}, onIdle: () => { idled++; } });
+let idled = 0;
 q.add('a', 'b');
 q.add('c');
 await new Promise((r) => setTimeout(r, 100));
 assert.deepEqual(seen, ['a:1', 'b:1', 'c:0']);
 assert.equal(most, 1);
+assert.equal(idled, 1);
 
 console.log('ok');

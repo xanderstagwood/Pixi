@@ -1,7 +1,6 @@
 import { rand, randInt, sleep } from './anim.js';
 import { hexToRgb, sequence, stackOrder, variations } from './color.js';
 import { extractColors, lightOnTop } from './extract.js';
-import { createProgress } from './progress.js';
 import { createQueue } from './queue.js';
 import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
 import { createCarousel } from './carousel.js';
@@ -33,7 +32,6 @@ const idle = () => app.status === 'IDLE' || app.status === 'CAROUSEL';
 let session = null;
 
 const carousel = createCarousel(track);
-const bar = createProgress($('progress'));
 const stage = createStage($('stage'), $('stage').querySelector('canvas'));
 
 /**
@@ -100,16 +98,12 @@ async function analyze(file, last) {
   session = { scan: null };
   try {
     carousel.focus(Infinity, true);
-    bar.reset();
     setStatus('EXPANDING');
-    const opening = stage.open(work, cardRect(), cardCells);
-    bar.to(0.05, 600);
-    const bloxels = await opening;
+    const bloxels = await stage.open(work, cardRect(), cardCells);
 
     work.width = work.height = 0; // the source pixels are spent: the bloxel grid holds all that is kept
 
     setStatus('ANALYZING');
-    bar.to(0.2, T.ripple * 1.14); // the wave takes its sweep plus the time the last block needs to grow
     await bloxels.ripple(T.ripple);
 
     const bases = clusters.map((c) => c.hex);
@@ -124,11 +118,6 @@ async function analyze(file, last) {
 
     const rgbOf = (hex) => Object.values(hexToRgb(hex));
     const targets = clusters.map((c, i) => ({ rgb: rgbOf(c.hex), final: rgbOf(candidates[i][keep[i]]) }));
-    // The bar's middle stretch counts real work: each rest and each parking.
-    const units = CHIPS * ((T.hits[0] + T.hits[1]) / 2 + 1);
-    let worked = 0;
-    const step = () => bar.to(0.2 + 0.6 * Math.min(1, ++worked / units), 400);
-
     // What each chip will show is decided before anything moves, and the drone that hunts it goes to
     // the bloxel closest to that color: it comes to rest there, and only then does the chip shift.
     // When it parks, the chip lands on the kept color.
@@ -137,17 +126,14 @@ async function analyze(file, last) {
     const landing = [];
     const scan = runScanners($('scanners'), bloxels, targets, {
       next: (i) => { const hex = plan[i][taken[i]++]; return { hex, rgb: rgbOf(hex) }; },
-      onStop: (i, hex) => { step(); stack.swapTo(slotOf[i], hex); },
-      onFinish: (i) => { step(); landing.push(stack.swapTo(slotOf[i], candidates[i][keep[i]])); },
+      onStop: (i, hex) => { stack.swapTo(slotOf[i], hex); },
+      onFinish: (i) => { landing.push(stack.swapTo(slotOf[i], candidates[i][keep[i]])); },
     }, T);
     session.scan = scan;
     await scan.finished;
     await Promise.all(landing);
-    bar.to(0.8, 200); // in case the counted steps came up short
 
-    bar.to(0.92, CHIPS * T.lockGap + 360);
     await Promise.all(clusters.map((_, slot) => sleep(slot * T.lockGap).then(() => stack.lock(slot))));
-    bar.to(1, T.hold);
     await sleep(T.hold);
     scan.clear();
 
@@ -246,9 +232,26 @@ function copyChip(card, e) {
 
 /* ---- input ---- */
 
-// Images dropped or chosen together are analysed one after another, in the order given.
-const batch = createQueue((file, left) => analyze(file, left === 0), { pause: () => sleep(500) });
-const addImages = (files) => batch.add(...files.filter((f) => f.type.startsWith('image/')));
+// Images dropped or chosen together are analysed one after another, in the order given, up to
+// MAX_BATCH in one go. The corner tag counts them: this one of how many.
+const MAX_BATCH = 5;
+let batchTotal = 0, batchDone = 0;
+const counter = $('counter');
+const showCount = () => {
+  counter.hidden = batchTotal === 0;
+  counter.textContent = `${Math.min(batchDone + 1, batchTotal)}/${batchTotal}`;
+};
+const batch = createQueue(async (file, left) => {
+  showCount();
+  try { await analyze(file, left === 0); } finally { batchDone++; showCount(); }
+}, { pause: () => sleep(500), onIdle: () => { batchTotal = batchDone = 0; showCount(); } });
+const addImages = (files) => {
+  const take = files.filter((f) => f.type.startsWith('image/')).slice(0, Math.max(0, MAX_BATCH - batchTotal));
+  if (!take.length) return;
+  batchTotal += take.length;
+  showCount();
+  batch.add(...take);
+};
 
 const go = (i) => { if (idle()) carousel.focus(i); };
 // A narrow screen stacks the cards top to bottom; a wide one lays them out left to right.
@@ -319,7 +322,6 @@ watchPixelSnap(() => {
   if (session) { // the viewport changed mid-analysis: re-lay the grid, then the drones onto it
     stage.relayout();
     session.scan?.refit();
-    bar.refit();
   }
 });
 // Canvas text falls back to a plain font if it is drawn before the pixel font arrives, so
