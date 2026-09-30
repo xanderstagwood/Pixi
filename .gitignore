@@ -1,1 +1,18 @@
+# Only what the app needs to run is tracked: index.html, style.css, src/, icons/ and fonts/.
+# Everything else stays on disk but out of the repository.
+
+# Reference material and notes
 spec/
+README.md
+
+# Checks (run locally with: node test/check.mjs)
+test/
+
+# Editor, OS and tool clutter
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+.vscode/
+.idea/
+.claude/
