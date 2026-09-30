@@ -11,9 +11,10 @@ const PARK_MS = 500; // how long a parked drone stays visible before it fades
  * @param {ReturnType<import('./bloxel.js').createBloxels>} grid
  * @param {{rgb: number[], fx: number, fy: number}[]} targets one per cluster: its color, and where in the
  *        image (0-1 fractions) its color really sits, so a parked drone can be re-placed if the grid changes
- * @param {{stagger: number, roam: [number, number]}} timing ms between launches; range of roam time per drone
+ * @param {{stagger: number, roam: [number, number], onStop?: (i: number) => void}} opts ms between launches; range of
+ *        roam time per drone; `onStop(i)` fires each time drone i comes to rest on a bloxel while it roams
  */
-export function runScanners(host, grid, targets, onFinish, { stagger, roam }) {
+export function runScanners(host, grid, targets, onFinish, { stagger, roam, onStop }) {
   // The grid can be laid out again (the viewport changed), so its size is read live and everything
   // derived from it is rebuilt by `refit`.
   let { cols, rows } = grid;
@@ -89,6 +90,7 @@ export function runScanners(host, grid, targets, onFinish, { stagger, roam }) {
         s.hits++;
         s.el.animate([{ background: 'rgba(243,242,241,0.4)' }, { background: 'rgba(243,242,241,0)' }], { duration: 180 });
       }
+      onStop?.(s.i);
       if (s.hits >= s.need || now >= s.deadline) {
         s.homing = true;
         const home = grid.cellAt(targets[s.i].fx, targets[s.i].fy);

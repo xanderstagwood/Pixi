@@ -1,4 +1,4 @@
-import { rand, shuffle, sleep } from './anim.js';
+import { rand, randInt, sleep } from './anim.js';
 import { hexToRgb, stackOrder, variations } from './color.js';
 import { extractColors, lightOnTop } from './extract.js';
 import { createProgress } from './progress.js';
@@ -19,8 +19,8 @@ const track = $('track');
 
 // Every duration in ms. The shrink is stage.js MORPH_MS, matched by the track transition in CSS.
 const T = {
-  ripple: 1600, lockGap: 100, hold: 2000,
-  stagger: 140, roam: [1200, 2800], dwell: [160, 340],
+  ripple: 1600, lockGap: 100, hold: 1200,
+  stagger: 140, roam: [3600, 6300],
   chargeToBurst: 1200,
 };
 const MAX_SIDE = 2048; // the working copy of a huge image never exceeds this
@@ -65,18 +65,6 @@ function sample(work, max = 200) {
   const g = Object.assign(document.createElement('canvas'), { width: w, height: h }).getContext('2d', { willReadFrequently: true });
   g.drawImage(work, 0, 0, w, h);
   return g.getImageData(0, 0, w, h);
-}
-
-/** Show each slot's five candidates one after another, ending on the one kept. */
-async function compare(stack, slot, candidates, keep, onStep) {
-  const seq = [...shuffle([1, 2, 3, 4]), keep].filter((c, k, a) => c !== a[k - 1]);
-  await stack.swapTo(slot, candidates[0]);
-  onStep();
-  for (const c of seq) {
-    await sleep(rand(...T.dwell));
-    await stack.swapTo(slot, candidates[c]);
-    onStep();
-  }
 }
 
 const paintCard = (card) => renderCard(card.querySelector('canvas'), card.palette, unit().n, { ui: true });
@@ -134,18 +122,28 @@ async function analyze(file, last) {
     stack.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'steps(5)' });
 
     const targets = clusters.map((c) => ({ rgb: Object.values(hexToRgb(c.hex)), fx: c.x, fy: c.y }));
-    const comparing = [];
-    // The bar's middle stretch counts real work: each drone parking and each chip swap.
-    const units = CHIPS * 6;
+    // The bar's middle stretch counts real work: each stop and each parking.
+    const units = CHIPS * 8;
     let worked = 0;
     const step = () => bar.to(0.2 + 0.6 * Math.min(1, ++worked / units), 400);
+
+    // The chips move with the drones. A chip appears the first time its drone comes to rest on a
+    // bloxel, shifts to another candidate every time that drone rests again, and lands on the
+    // kept color when the drone parks: the two look like one mechanism.
+    const lastShown = clusters.map(() => -1);
+    const another = (i) => {
+      let c;
+      do { c = randInt(0, candidates[i].length - 1); } while (c === lastShown[i]);
+      return (lastShown[i] = c);
+    };
+    const landing = [];
     const scan = runScanners($('scanners'), bloxels, targets, (i) => {
       step();
-      comparing.push(compare(stack, slotOf[i], candidates[i], keep[i], step));
-    }, T);
+      landing.push(stack.swapTo(slotOf[i], candidates[i][keep[i]]));
+    }, { ...T, onStop: (i) => { step(); stack.swapTo(slotOf[i], candidates[i][another(i)]); } });
     session.scan = scan;
     await scan.finished;
-    await Promise.all(comparing);
+    await Promise.all(landing);
     bar.to(0.8, 200); // in case the counted steps came up short
 
     bar.to(0.92, CHIPS * T.lockGap + 360);
