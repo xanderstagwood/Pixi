@@ -59,7 +59,9 @@ export function createBloxels(canvas, source, cardCells) {
     // Cell lines through the card window's edges: its width is a whole number of cells.
     const alignX = mod(c.x - (card.cols / 2) * cell, cell), alignY = mod(c.y - (card.rows / 2) * cell, cell);
 
-    const fit = Math.min(W / iw, H / ih); // device px per image px
+    // Device px per image px: the image contained in the viewport, but never so small that it falls short
+    // of the card window, which must always be full of bloxels. Bloxels themselves are never resized.
+    const fit = Math.max(Math.min(W / iw, H / ih), (card.cols * cell) / iw, (card.rows * cell) / ih);
     const cols = Math.max(1, Math.min(Math.floor((iw * fit) / cell), Math.floor((W - alignX) / cell)));
     const rows = Math.max(1, Math.min(Math.floor((ih * fit) / cell), Math.floor((H - alignY) / cell)));
     // Centered as near as the cell lines allow: shift by whole cells, never off the canvas.

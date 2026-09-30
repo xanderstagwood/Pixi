@@ -55,6 +55,11 @@ export function layout() {
   return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: (h - CHIPS_H) / 2 - CELL / 2 } };
 }
 
+// Past the edge of a grid the picture is mirrored back, so a card is full of bloxels whatever size the viewport
+// it was made in, or is shown in, gives it.
+const mirror = (v, n) => { const m = ((v % (2 * n)) + 2 * n) % (2 * n); return m < n ? m : 2 * n - 1 - m; };
+const gridIndex = (grid, first, c, r) => (mirror(first.r + r, grid.rows) * grid.cols + mirror(first.c + c, grid.cols)) * 4;
+
 const measure = document.createElement('canvas').getContext('2d');
 /**
  * Device pixels from a box's left edge to where `text` starts so it sits centered. Rounded to
@@ -81,15 +86,13 @@ export function renderCard(canvas, palette, s, { ui = false, dim = false } = {})
   g.fillStyle = GROUND;
   g.fillRect(0, 0, canvas.width, canvas.height);
 
-  // The window onto the grid: cells outside it (a small image) stay dark.
+  // The window onto the grid.
   const { grid } = palette;
   const first = { c: Math.round(grid.cx - cells.cols / 2), r: Math.round(grid.cy - cells.rows / 2) };
   const cell = CELL * s;
   for (let r = 0; r < cells.rows; r++) {
     for (let c = 0; c < cells.cols; c++) {
-      const gc = first.c + c, gr = first.r + r;
-      if (gc < 0 || gr < 0 || gc >= grid.cols || gr >= grid.rows) continue;
-      const i = (gr * grid.cols + gc) * 4;
+      const i = gridIndex(grid, first, c, r);
       const x = c * cell + s, y = r * cell + s;
       g.fillStyle = `rgb(${grid.rgb[i]},${grid.rgb[i + 1]},${grid.rgb[i + 2]})`;
       g.fillRect(x, y, cell - 2 * s, cell - 2 * s); // a font pixel on every side: two between blocks
@@ -168,12 +171,10 @@ export function twinkleCells(palette) {
   const out = [];
   for (let r = 0; r < cells.rows; r++) {
     for (let c = 0; c < cells.cols; c++) {
-      const gc = first.c + c, gr = first.r + r;
-      if (gc < 0 || gr < 0 || gc >= grid.cols || gr >= grid.rows) continue;
       const x = c * CELL, y = r * CELL;
       const overChips = x < block.x1 && x + CELL > block.x0 && y < block.y1 && y + CELL > block.y0;
       if (overChips || y + CELL > L.name.y - 4) continue;
-      const i = (gr * grid.cols + gc) * 4;
+      const i = gridIndex(grid, first, c, r);
       out.push({ c, r, rgb: [grid.rgb[i], grid.rgb[i + 1], grid.rgb[i + 2]] });
     }
   }
