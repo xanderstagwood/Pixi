@@ -1,6 +1,7 @@
-import { frames, rand, randInt, sleep } from './anim.js';
+import { frames, rand, randInt } from './anim.js';
 
 const SIZE = 1; // scanner outline is SIZE x SIZE cells: one bloxel
+const PARK_MS = 500; // how long a parked drone stays visible before it fades
 
 /**
  * Seven square drones hop across the block grid. Each hunts one color cluster: it
@@ -80,6 +81,8 @@ export function runScanners(host, grid, targets, onFinish, { stagger, roam }) {
         s.el.classList.add('parked');
         s.el.animate([{ background: 'rgba(243,242,241,0.6)' }, { background: 'rgba(243,242,241,0)' }], { duration: 300 });
         onFinish(s.i);
+        // Its work is done: let it show where it landed, then step away while the chips finish sorting.
+        setTimeout(() => s.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'steps(4)', fill: 'forwards' }).finished.then(() => s.el.remove()), PARK_MS);
         continue;
       }
       if (owner[s.to.cy * cols + s.to.cx] === s.i) {
@@ -118,11 +121,7 @@ export function runScanners(host, grid, targets, onFinish, { stagger, roam }) {
         place(s);
       }
     },
-    /** Fade the drones out and remove them. */
-    async clear() {
-      drones.forEach((s) => s.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'steps(4)', fill: 'forwards' }));
-      await sleep(300);
-      host.replaceChildren();
-    },
+    /** Remove whatever is left: normally every drone has faded away already. */
+    clear() { host.replaceChildren(); },
   };
 }

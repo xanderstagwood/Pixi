@@ -18,8 +18,8 @@ const track = $('track');
 
 // Every duration in ms. The shrink is stage.js MORPH_MS, matched by the track transition in CSS.
 const T = {
-  ripple: 2400, lockGap: 160, hold: 900,
-  stagger: 220, roam: [2600, 4800], dwell: [300, 560],
+  ripple: 1600, lockGap: 100, hold: 2000,
+  stagger: 140, roam: [1200, 2800], dwell: [160, 340],
   chargeToBurst: 1200,
 };
 const MAX_SIDE = 2048; // the working copy of a huge image never exceeds this
@@ -136,7 +136,7 @@ async function analyze(file, last) {
 
     await Promise.all(clusters.map((_, slot) => sleep(slot * T.lockGap).then(() => stack.lock(slot))));
     await sleep(T.hold);
-    await scan.clear();
+    scan.clear();
 
     const palette = { name: '', colors: [], coordinates: [], grid: bloxels.keep(), copied: -1, createdAt: Date.now() };
     clusters.forEach((c, i) => {
