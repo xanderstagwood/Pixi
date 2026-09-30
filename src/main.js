@@ -26,7 +26,7 @@ const T = {
 };
 const MAX_SIDE = 2048; // the working copy of a huge image never exceeds this
 // Limits on what is accepted at all, so five huge files cannot strain a phone or a small laptop.
-const MAX_BYTES = 25 * 1024 * 1024; // per file, so at most 125MB in a batch
+const MAX_BYTES = 25 * 1024 * 1024; // per file, so at most 225MB in a batch
 const MAX_PIXELS = 64e6; // 8000 x 8000
 
 const app = { status: 'IDLE' };
@@ -243,7 +243,7 @@ function copyChip(card, e) {
 
 // Images dropped or chosen together are analysed one after another, in the order given, up to
 // MAX_BATCH in one go. The corner tag counts them: this one of how many.
-const MAX_BATCH = 5;
+const MAX_BATCH = 9;
 let batchTotal = 0, batchDone = 0;
 const counter = $('counter');
 const showCount = () => {
