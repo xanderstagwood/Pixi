@@ -394,6 +394,13 @@ fontReady.then(() => {
 document.fonts.addEventListener('loadingdone', repaint);
 // Buttons rather than links: the browser's status bubble for a hovered link would cover this corner.
 document.querySelectorAll('#version [data-url]').forEach((b) => b.addEventListener('click', () => window.open(b.dataset.url, '_blank', 'noopener')));
+const kofi = document.querySelector('.tag-btn--heart');
+const KOFI_SEEN = 'pixi.kofi-seen';
+try { if (!localStorage.getItem(KOFI_SEEN)) kofi.classList.add('nudge'); } catch { kofi.classList.add('nudge'); } // storage unavailable: it keeps pulsing
+kofi.addEventListener('click', () => {
+  kofi.classList.remove('nudge');
+  try { localStorage.setItem(KOFI_SEEN, '1'); } catch { /* unavailable: the pulse returns next visit */ }
+});
 $('version-label').textContent = `Pixi v${VERSION}`;
 document.title = `Pixi v${VERSION} (ALPHA)`;
 setStatus('IDLE');

@@ -235,6 +235,10 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 #version .tag-btn:active { background: var(--gray-13); }
 #version .tag-btn:hover .icon, #version .tag-btn:focus-visible .icon { --icon-color: var(--gray-1); }
 #version .tag-btn--heart:hover .icon { --icon-color: var(--accent); }
+/* Until it has been clicked once, the heart breathes between its dim color and the accent, as Sprite's does. */
+@keyframes nudge-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+#version .tag-btn--heart.nudge .icon { --icon-color: var(--accent); animation: nudge-pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { #version .tag-btn--heart.nudge .icon { animation: none; } }
 #version .tag-btn:focus-visible { outline: calc(2 * var(--px)) solid var(--accent); outline-offset: calc(-2 * var(--px)); }
 
 #scanners { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
