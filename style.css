@@ -69,10 +69,10 @@ body {
 
 #logo {
   position: fixed;
-  --icon-px: calc(4 * var(--px));
+  --icon-px: calc(6 * var(--px));
   --icon-color: var(--gray-7);
-  left: calc(var(--cx) - 12 * var(--px));
-  top: calc(24 * var(--px));
+  left: calc(var(--cx) - 18 * var(--px));
+  top: calc(12 * var(--px)); /* clear of the delete button, which sits from y=48 on the tallest card */
   z-index: 5;
 }
 
