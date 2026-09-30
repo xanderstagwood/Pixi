@@ -68,6 +68,7 @@ body {
 .icon--export { --mask: url(icons/export.svg); }
 .icon--remove { --mask: url(icons/remove.svg); }
 .icon--pixi { --mask: url(icons/pixi.svg); }
+
 /* ---- carousel ---- */
 
 #carousel { position: fixed; inset: 0; overflow: hidden; }
@@ -119,22 +120,22 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 
 .card canvas { display: block; width: var(--card-w); height: var(--card-h); image-rendering: pixelated; } /* never smoothed: smoothing rings light and dark along block edges */
 
-/* Sits over the name drawn into the canvas (src/card.js layout().name), in a 32px face. */
+/* Sits over the name drawn into the canvas (src/card.js layout().name), in the 16px face. */
 .name {
   position: absolute;
-  left: calc(var(--nx, 16) * var(--px));
-  top: calc(var(--ny, 432) * var(--px));
-  width: calc(var(--nw, 288) * var(--px));
-  height: calc(32 * var(--px));
-  font-size: calc(32 * var(--px));
-  line-height: calc(32 * var(--px));
+  left: calc(var(--nx, 12) * var(--px));
+  top: calc(var(--ny, 456) * var(--px));
+  width: calc(var(--nw, 128) * var(--px));
+  height: calc(16 * var(--px));
+  font-size: calc(16 * var(--px));
+  line-height: calc(16 * var(--px));
   padding: 0;
   background: none;
   border: 0;
   outline: none;
   color: transparent; /* the canvas draws the text; this only supplies the caret and typing */
   caret-color: var(--gray-1);
-  text-align: center;
+  text-align: left;
   font-family: inherit;
 }
 .name::selection { background: var(--accent); color: transparent; }

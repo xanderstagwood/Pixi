@@ -87,6 +87,9 @@ function cardRect() {
   return new DOMRect(c.x - w / 2, c.y - h / 2, w, h);
 }
 
+/** The first 12 characters of the file's name, without its extension: what a fresh card is called. */
+const defaultName = (file) => file.name.replace(/\.[^.]*$/, '').trim().slice(0, 12);
+
 /** @param {boolean} last no more images are waiting, so the name field may take focus */
 async function analyze(file, last) {
   if (!idle()) return;
@@ -142,7 +145,7 @@ async function analyze(file, last) {
     await sleep(T.hold);
     scan.clear();
 
-    const palette = { name: '', colors: [], coordinates: [], grid: bloxels.keep(), copied: -1, createdAt: Date.now() };
+    const palette = { name: defaultName(file), colors: [], coordinates: [], grid: bloxels.keep(), copied: -1, createdAt: Date.now() };
     clusters.forEach((c, i) => {
       palette.colors[slotOf[i]] = candidates[i][keep[i]];
       palette.coordinates[slotOf[i]] = { x: c.x, y: c.y };
@@ -204,6 +207,7 @@ function burst(button) {
 
 function wire(card) {
   const p = card.palette, name = card.querySelector('.name'), dl = card.querySelector('.dl');
+  name.value = p.name;
   card.querySelector('.rm').addEventListener('click', () => { if (idle()) carousel.remove(card); });
   name.addEventListener('input', () => { p.name = name.value; paintCard(card); });
   name.addEventListener('keydown', (e) => { if (e.key === 'Enter') name.blur(); });

@@ -18,9 +18,11 @@ const GRAY_5 = '#979693', INK = '#F3F2F1';
 export const CHIP_HIT = 1.6; // a chip's light hit is a bigger step than a bloxel's
 export const EXPORT_SCALE = 4;
 // A 6px capital centered between the 1px highlight and the 1px shadow sits on this baseline;
-// the 32px name's 12px capitals are centered in their 32px line.
+// in the footer's 16px line it sits 11px down.
 const LABEL_BASE = 1 + (CHIP.h - 2 - 6) / 2 + 6;
-const NAME_BASE = (32 - 12) / 2 + 12;
+const FOOT_BASE = 11;
+// The Pixi logo, drawn from Sprite's 6x6 icon: the cells that are filled.
+const PIXI = [[0, 0], [3, 0], [1, 1], [3, 2], [5, 2], [1, 3], [3, 3], [0, 4], [3, 4], [2, 5]];
 
 let cells = { cols: 20, rows: 30 };
 
@@ -43,12 +45,12 @@ export function fitCardCells() {
 export const cardCells = () => cells;
 
 /**
- * Positions inside the card, in font pixels. The name sits near the bottom, the chips above
- * it, as near the middle as a half-bloxel start allows.
+ * Positions inside the card, in font pixels. A footer line runs along the bottom (the name at the left,
+ * the credit at the right), and the chips sit above it, as near the middle as a half-bloxel start allows.
  */
 export function layout() {
   const w = cells.cols * CELL, h = cells.rows * CELL;
-  const name = { x: 16, y: h - 48, w: w - 32, h: 32 };
+  const name = { x: 12, y: h - 24, w: 128, h: 16 };
   const half = CELL / 2;
   const top = half + CELL * Math.max(0, Math.round(((name.y - CHIPS_H) / 2 - half) / CELL));
   return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: top } };
@@ -126,21 +128,31 @@ export function renderCard(canvas, palette, s, { ui = false, dim = false } = {})
     g.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // The name floats over the blocks, a size up. Its shadow is soft but heavy: drawn twice so the
-  // blur is dense enough to separate it from light blocks without a hard edge.
-  const label = palette.name || (ui ? 'NAME' : '');
-  if (label) {
-    g.font = `${32 * s}px "Stagwood Sprite 64", monospace`;
-    const x = L.name.x * s + textOffset(label, L.name.w, s, 32), y = (L.name.y + NAME_BASE) * s;
+  // The footer: the name at the bottom left, "Made with Pixi" and the logo at the bottom right, both in the
+  // 16px face. Their shadow is soft but heavy (drawn twice) so they separate from light blocks without a hard edge.
+  const soft = (draw) => {
     g.save();
     g.shadowColor = 'rgba(0, 0, 0, 0.85)';
-    g.shadowBlur = 8 * s;
+    g.shadowBlur = 6 * s;
     g.shadowOffsetY = 2 * s;
-    g.fillStyle = palette.name ? INK : GRAY_5;
-    g.fillText(label, x, y);
-    g.fillText(label, x, y);
+    draw();
+    draw();
     g.restore();
-  }
+  };
+  g.font = `${16 * s}px "Stagwood Sprite 64", monospace`;
+  const base = (L.name.y + FOOT_BASE) * s;
+  const label = palette.name || (ui ? 'NAME' : '');
+  if (label) soft(() => { g.fillStyle = palette.name ? INK : GRAY_5; g.fillText(label, L.name.x * s, base); });
+
+  // On a narrow card the credit gives up its first words rather than run into the name.
+  const edge = (L.w - 12) * s, icon = 6 * s, gap = 4 * s;
+  const nameEnd = L.name.x * s + (label ? g.measureText(label).width : 0);
+  const words = g.measureText('Made with Pixi').width + gap + icon <= edge - nameEnd - 8 * s ? 'Made with Pixi' : 'Pixi';
+  soft(() => {
+    g.fillStyle = GRAY_5;
+    g.fillText(words, Math.round(edge - icon - gap - g.measureText(words).width), base);
+    for (const [cx, cy] of PIXI) g.fillRect(edge - icon + cx * s, base - 6 * s + cy * s, s, s); // a 6px icon as tall as a capital
+  });
 }
 
 /** The card as a PNG blob at export size. */
