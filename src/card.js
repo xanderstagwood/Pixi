@@ -10,7 +10,7 @@ export const CELL = 16; // font pixels per bloxel
 export const CHIPS = 7;
 // The chips' left and right edges stop halfway through a bloxel, never lining up with one: 9
 // bloxels wide on a card an even number wide. Vertically they are centered to the pixel instead.
-const CHIP = { w: 144, h: 32, pitch: 48 };
+const CHIP = { w: 144, h: 32, pitch: 44 };
 export const CHIP_W = CHIP.w;
 const CHIPS_H = (CHIPS - 1) * CHIP.pitch + CHIP.h;
 const GRAY_5 = '#979693', INK = '#F3F2F1';
@@ -150,7 +150,7 @@ export function renderCard(canvas, palette, s, { ui = false, dim = false } = {})
   soft(() => {
     g.fillStyle = GRAY_5;
     g.fillText(words, Math.round(edge - icon - gap - g.measureText(words).width), base);
-    for (const [cx, cy] of PIXI) g.fillRect(edge - icon + cx * s, base - 6 * s + cy * s, s, s); // a 6px icon as tall as a capital
+    for (const [cx, cy] of PIXI) g.fillRect(edge - icon + cx * s, base - 5 * s + cy * s, s, s); // a 6px icon as tall as a capital, sitting one pixel low
   });
 }
 

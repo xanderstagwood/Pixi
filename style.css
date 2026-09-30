@@ -249,7 +249,7 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
   width: calc(var(--kw, 144) * var(--px));
   display: flex;
   flex-direction: column-reverse; /* slot 0 at the bottom */
-  gap: calc(16 * var(--px)); /* card.js CHIP: pitch 48 less a 32 chip */
+  gap: calc(12 * var(--px)); /* card.js CHIP: pitch 44 less a 32 chip */
 }
 .slot { position: relative; height: calc(32 * var(--px)); overflow: hidden; box-shadow: 0 calc(2 * var(--px)) calc(6 * var(--px)) rgba(0, 0, 0, 0.4); } /* as card.js's chip shadow */
 .chip {
