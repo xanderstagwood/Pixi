@@ -68,16 +68,6 @@ body {
 .icon--export { --mask: url(icons/export.svg); }
 .icon--remove { --mask: url(icons/remove.svg); }
 .icon--pixi { --mask: url(icons/pixi.svg); }
-
-#logo {
-  position: fixed;
-  --icon-px: calc(6 * var(--px));
-  --icon-color: var(--gray-7);
-  left: calc(var(--cx) - 18 * var(--px));
-  top: calc(12 * var(--px)); /* clear of the delete button, which sits from y=48 on the tallest card */
-  z-index: 5;
-}
-
 /* ---- carousel ---- */
 
 #carousel { position: fixed; inset: 0; overflow: hidden; }

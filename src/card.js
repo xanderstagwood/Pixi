@@ -26,7 +26,8 @@ let cells = { cols: 20, rows: 30 };
 
 /**
  * Sizes the card to the viewport, in whole bloxels (even, so it centers on cell lines):
- * up to 20x30, less on a small screen. Room is left above and below for the buttons.
+ * up to 20x30, less on a small screen. Room is left above and below for the buttons, which hang
+ * 56 font pixels off either end of the card, so the card and its buttons stay centered as a group.
  */
 export function fitCardCells() {
   const { css } = unit();
@@ -34,7 +35,7 @@ export function fitCardCells() {
   const even = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.floor(v / 2) * 2));
   cells = {
     cols: even((root.clientWidth / css - 32) / CELL, 12, 20),
-    rows: even((root.clientHeight / css - 208) / CELL, 24, 30),
+    rows: even((root.clientHeight / css - 160) / CELL, 24, 30),
   };
   return cells;
 }
