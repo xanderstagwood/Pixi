@@ -110,6 +110,23 @@ export function extractColors({ data, width, height }, k = 7, random = Math.rand
     chosen.push(best);
     pool = pool.filter((c) => c !== best);
   }
+
+  // The palette must keep both ends of the picture's lightness. The range bonus leans that way but a
+  // jittered pick can still settle for the second-darkest, so make sure the darkest and the lightest
+  // color that covers a real share of the picture are in, swapping out the most redundant other pick.
+  const real = cands.filter((c) => c.pop >= 0.01);
+  if (real.length && chosen.length >= 3) {
+    const darkest = real.reduce((a, b) => (b.lab.L < a.lab.L ? b : a));
+    const lightest = real.reduce((a, b) => (b.lab.L > a.lab.L ? b : a));
+    for (const end of [darkest, lightest]) {
+      const lows = chosen.map((c) => c.lab.L);
+      const beyond = end.lab.L < Math.min(...lows) - 0.03 || end.lab.L > Math.max(...lows) + 0.03;
+      if (chosen.includes(end) || !beyond) continue;
+      const others = chosen.filter((c) => c !== darkest && c !== lightest);
+      const crowd = (c) => Math.min(...chosen.filter((o) => o !== c).map((o) => deltaE(c.lab, o.lab)));
+      if (others.length) chosen[chosen.indexOf(others.reduce((a, b) => (crowd(b) < crowd(a) ? b : a)))] = end;
+    }
+  }
   while (chosen.length < k) chosen.push(chosen[chosen.length % Math.max(1, chosen.length)]); // fewer colors than asked for: repeat
 
   return chosen.map((c) => {
