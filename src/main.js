@@ -19,8 +19,8 @@ const track = $('track');
 
 // Every duration in ms. The shrink is stage.js MORPH_MS, matched by the track transition in CSS.
 const T = {
-  ripple: 1600, lockGap: 100, hold: 1200,
-  stagger: 140, roam: [3600, 6300],
+  ripple: 2000, lockGap: 100, hold: 1200,
+  stagger: 140, roam: [7000, 10500], hits: [6, 10], // hits sets the length of the scan; roam is only the safety cap
   chargeToBurst: 1200,
 };
 const MAX_SIDE = 2048; // the working copy of a huge image never exceeds this

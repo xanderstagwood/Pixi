@@ -11,10 +11,11 @@ const PARK_MS = 500; // how long a parked drone stays visible before it fades
  * @param {ReturnType<import('./bloxel.js').createBloxels>} grid
  * @param {{rgb: number[], fx: number, fy: number}[]} targets one per cluster: its color, and where in the
  *        image (0-1 fractions) its color really sits, so a parked drone can be re-placed if the grid changes
- * @param {{stagger: number, roam: [number, number], onStop?: (i: number) => void}} opts ms between launches; range of
- *        roam time per drone; `onStop(i)` fires each time drone i comes to rest on a bloxel while it roams
+ * @param {{stagger: number, roam: [number, number], hits: [number, number], onStop?: (i: number) => void}} opts ms between
+ *        launches; the latest a drone roams before it heads home; how many matching bloxels it needs to find first
+ *        (this sets how long the scan runs); `onStop(i)` fires each time drone i comes to rest on a bloxel while it roams
  */
-export function runScanners(host, grid, targets, onFinish, { stagger, roam, onStop }) {
+export function runScanners(host, grid, targets, onFinish, { stagger, roam, hits, onStop }) {
   // The grid can be laid out again (the viewport changed), so its size is read live and everything
   // derived from it is rebuilt by `refit`.
   let { cols, rows } = grid;
@@ -53,7 +54,7 @@ export function runScanners(host, grid, targets, onFinish, { stagger, roam, onSt
     el.style.width = el.style.height = `${SIZE * grid.cell}px`;
     host.append(el);
     const s = {
-      i, el, cx: randInt(0, cols - 1), cy: randInt(0, rows - 1), hits: 0, need: randInt(3, 5),
+      i, el, cx: randInt(0, cols - 1), cy: randInt(0, rows - 1), hits: 0, need: randInt(...hits),
       startAt: now0 + i * stagger, deadline: now0 + i * stagger + rand(...roam), homing: false, done: false, t0: 0, dur: 1,
     };
     s.from = s.to = { cx: s.cx, cy: s.cy };
