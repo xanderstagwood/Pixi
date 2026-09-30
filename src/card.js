@@ -1,4 +1,4 @@
-import { GROUND, inkFor, mix } from './color.js';
+import { GROUND, hit, inkFor, mix } from './color.js';
 import { unit } from './pixel.js';
 
 // The finished palette card, drawn straight to a canvas in font-pixel units (see pixel.js)
@@ -86,8 +86,11 @@ export function renderCard(canvas, palette, s, { ui = false } = {}) {
       const gc = first.c + c, gr = first.r + r;
       if (gc < 0 || gr < 0 || gc >= grid.cols || gr >= grid.rows) continue;
       const i = (gr * grid.cols + gc) * 4;
+      const x = c * cell + s, y = r * cell + s;
       g.fillStyle = `rgb(${grid.rgb[i]},${grid.rgb[i + 1]},${grid.rgb[i + 2]})`;
-      g.fillRect(c * cell + s, r * cell + s, cell - 2 * s, cell - 2 * s); // a font pixel on every side: two between blocks
+      g.fillRect(x, y, cell - 2 * s, cell - 2 * s); // a font pixel on every side: two between blocks
+      g.fillStyle = hit(grid.rgb[i], grid.rgb[i + 1], grid.rgb[i + 2]);
+      g.fillRect(x, y, cell - 2 * s, s); // the faint light hit along the top, as bloxel.js draws it
     }
   }
 

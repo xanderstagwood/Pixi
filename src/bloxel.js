@@ -1,5 +1,5 @@
 import { frames } from './anim.js';
-import { GROUND, hexToRgb } from './color.js';
+import { GROUND, hexToRgb, hit } from './color.js';
 import { centerDev, unit } from './pixel.js';
 
 const CELL_PX = 16; // font pixels per bloxel
@@ -109,8 +109,12 @@ export function createBloxels(canvas, source, cardCells) {
     ctx.fillRect(x, y, g.cell, g.cell);
     if (size <= 0) return;
     const off = g.inset + Math.floor((g.full - size) / 2);
-    ctx.fillStyle = `rgb(${g.shown[i * 4]},${g.shown[i * 4 + 1]},${g.shown[i * 4 + 2]})`;
+    const [r, gr, b] = g.shown.subarray(i * 4, i * 4 + 3);
+    ctx.fillStyle = `rgb(${r},${gr},${b})`;
     ctx.fillRect(x + off, y + off, size, size);
+    if (size < 3 * g.inset) return; // too small yet for a line along its top
+    ctx.fillStyle = hit(r, gr, b);
+    ctx.fillRect(x + off, y + off, size, g.inset);
   };
   const paintCell = (i) => paintBlock(i, Math.round(g.full * easeOut(Math.min(1, (front - when(i)) / GROW))));
 

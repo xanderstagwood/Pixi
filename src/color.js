@@ -49,6 +49,13 @@ export function temperature(hex) {
   return Math.cos(((h - 30) * Math.PI) / 180) * Math.min(1, s / 0.2);
 }
 
+/**
+ * The light hit on a bloxel: its own color a very little brighter, as a CSS color, for a
+ * one font pixel line along its top edge. Faint on purpose: it only keeps dark blocks
+ * (which sit at the ground color) reading as squares.
+ */
+export const hit = (r, g, b) => `rgb(${Math.round(r + (255 - r) * 0.08)},${Math.round(g + (255 - g) * 0.08)},${Math.round(b + (255 - b) * 0.08)})`;
+
 /** Mix of `hex` toward `toward` ('#RRGGBB'), `amount` 0-1. */
 export function mix(hex, toward, amount) {
   const a = hexToRgb(hex), b = hexToRgb(toward);
