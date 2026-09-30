@@ -1,27 +1,24 @@
 // Run: node test/check.mjs. Smallest checks that fail if the pure logic breaks.
 import assert from 'node:assert/strict';
 import { crc32 as nodeCrc } from 'node:zlib';
-import { sequence, stackOrder, mix, variations, hexToHsl } from '../src/color.js';
-import { extractColors, lightOnTop } from '../src/extract.js';
+import { sequence, mix, variations, hexToRgb } from '../src/color.js';
+import { extractColors } from '../src/extract.js';
+import { arrange, decide, shadeCost, temperatureCost } from '../src/arrange.js';
+import { classify } from '../src/perceive.js';
+import { oklabToRgb, rgbToOklab, toOklch } from '../src/oklab.js';
 import * as f from '../src/export/formats.js';
 import { zip } from '../src/export/zip.js';
 import { createQueue } from '../src/queue.js';
 
-// Temperature first, bottom to top: cool blue, then gray, then warm orange. Duplicates keep separate indices.
-assert.deepEqual(stackOrder(['#FF8000', '#0080FF', '#808080'], true), [1, 2, 0]);
-assert.deepEqual(stackOrder(['#0000FF', '#0000FF'], true).sort(), [0, 1]);
-// A real palette that came out jumbled: muted purples and grays must still run warm to cool, top to bottom.
-assert.deepEqual(stackOrder(['#262421', '#443E44', '#B253BC', '#A7AEB5', '#5C5E66', '#7F3E87', '#70878F'], true), [6, 3, 4, 5, 2, 1, 0]);
-// Lightness only breaks near-ties: light above dark, or the reverse.
-assert.deepEqual(stackOrder(['#EEEEEE', '#222222'], true), [1, 0]);
-assert.deepEqual(stackOrder(['#EEEEEE', '#222222'], false), [0, 1]);
 assert.equal(mix('#000000', '#FFFFFF', 0.5), '#808080');
 
-// Five variations, base first, hue shifts wrap.
-const v = variations('#FF0000');
+// Five variations, base first: a darker one, a lighter one, and hue nudged 8 degrees either way.
+const v = variations('#D04A2A');
+const lch = v.map((h) => toOklch(rgbToOklab(hexToRgb(h))));
 assert.equal(v.length, 5);
-assert.equal(v[0], '#FF0000');
-assert.ok(Math.abs(hexToHsl(v[3]).h - 350) < 1 && Math.abs(hexToHsl(v[4]).h - 10) < 1);
+assert.equal(v[0], '#D04A2A');
+assert.ok(lch[1].L < lch[0].L && lch[2].L > lch[0].L);
+assert.ok(Math.abs(lch[3].h - lch[0].h + 8) < 1.5 && Math.abs(lch[4].h - lch[0].h - 8) < 1.5);
 
 // A predetermined run of colors: right length, only the given colors, none twice in a row.
 const run = sequence(['#111111', '#222222', '#333333', '#444444', '#555555'], 17);
@@ -33,17 +30,55 @@ assert.ok(run.every((c, i) => i === 0 || c !== run[i - 1]));
 const w = 20, h = 10, data = new Uint8ClampedArray(w * h * 4);
 for (let i = 0; i < w * h; i++) data.set(i % w < 10 ? [255, 0, 0, 255] : [0, 0, 255, 255], i * 4);
 const got = extractColors({ data, width: w, height: h }, 2);
-assert.deepEqual(got.map((c) => c.hex).sort(), ['#0000FF', '#FF0000']);
+assert.deepEqual(got.map((c) => c.hex).sort().map((h) => classify(h).temperature), ['cool', 'warm']);
 assert.ok(got.find((c) => c.hex === '#FF0000').x < 0.5 && got.find((c) => c.hex === '#0000FF').x > 0.5);
 
-// The stack follows the picture: light over dark reads as light on top, the reverse as dark on top.
-const tall = (topL, botL) => {
-  const d = new Uint8ClampedArray(4 * 4 * 4);
-  for (let i = 0; i < 16; i++) d.set(i < 8 ? [topL, topL, topL, 255] : [botL, botL, botL, 255], i * 4);
-  return { data: d, width: 4, height: 4 };
-};
-assert.equal(lightOnTop(tall(230, 20)), true);
-assert.equal(lightOnTop(tall(20, 230)), false);
+// OKLab round-trips a color.
+const back = oklabToRgb(rgbToOklab({ r: 200, g: 30, b: 90 }));
+assert.deepEqual([back.r, back.g, back.b].map(Math.round), [200, 30, 90]);
+
+// An eye's verdicts: orange is warm and blue is cool; a pale yellow is light and a navy is dark.
+assert.equal(classify('#FF5A1F').temperature, 'warm');
+assert.equal(classify('#2E5AAC').temperature, 'cool');
+assert.equal(classify('#F5E6A0').lightness, 'light');
+assert.equal(classify('#101830').lightness, 'dark');
+assert.equal(classify('#8A8A8A').temperature, 'neutral');
+assert.ok(classify('#948A82').warmth > classify('#82888F').warmth, 'a warm gray reads warmer than a cool gray');
+
+// Pattern costs: a fit costs nothing, the reverse costs plenty.
+assert.ok(temperatureCost([0.9, 0.5, 0.1, -0.3, -0.8], 'warm-to-cool') < 0.01);
+assert.ok(temperatureCost([0.9, 0.5, 0.1, -0.3, -0.8], 'cool-to-warm') > 1);
+assert.ok(shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'dark-to-light') < 0.01);
+assert.ok(shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'light-to-dark') > 0.5);
+assert.ok(shadeCost([0.2, 0.5, 0.9, 0.5, 0.2], 'dark-light-dark') < 0.01);
+assert.ok(shadeCost([0.2, 0.5, 0.9, 0.5, 0.2], 'light-dark-light') > 0.5);
+assert.ok(shadeCost([0.9, 0.5, 0.2, 0.5, 0.9], 'light-dark-light') < 0.01);
+assert.ok(shadeCost([0.1, 0.3, 0.5, 0.7, 0.9], 'dark-light-dark') > 0.1, 'a plain slope is not a peak');
+
+// Arranging: every palette gets both patterns, every color placed once, and the order fits what it says.
+const palette = ['#E8552B', '#F2B540', '#2E6FA5', '#1F3A5F', '#8FB8C9', '#B85C38', '#3E2A2A'];
+for (const roll of [0, 0.5, 0.99]) {
+  const plan = arrange(palette, () => roll);
+  assert.deepEqual([...plan.order].sort(), [0, 1, 2, 3, 4, 5, 6]);
+  assert.ok(['warm-to-cool', 'cool-to-warm'].includes(plan.temperature));
+  assert.ok(['dark-to-light', 'light-to-dark', 'dark-light-dark', 'light-dark-light'].includes(plan.shade));
+  const seen = plan.order.map((i) => classify(palette[i]));
+  assert.ok(temperatureCost(seen.map((c) => c.warmth), plan.temperature) < 0.3);
+}
+// The choice of candidate keeps the count and stays in range.
+const cands = palette.map((h) => [h, h, h]);
+const kept = decide(cands, arrange(palette, () => 0));
+assert.equal(kept.length, 7);
+assert.ok(kept.every((c) => c >= 0 && c < 3));
+
+// A small vivid patch is not lost among a large dull field, and a gradient keeps both its ends.
+const field = new Uint8ClampedArray(40 * 40 * 4);
+for (let i = 0; i < 1600; i++) field.set(i % 40 > 36 && i < 160 ? [220, 30, 40, 255] : [120 + (i % 9), 118 + (i % 7), 112 + (i % 8), 255], i * 4);
+assert.ok(extractColors({ data: field, width: 40, height: 40 }, 3).some((c) => classify(c.hex).temperature === 'warm' && classify(c.hex).C > 0.15));
+const ramp = new Uint8ClampedArray(60 * 10 * 4);
+for (let i = 0; i < 600; i++) { const v = Math.round(((i % 60) / 59) * 255); ramp.set([v, v, v, 255], i * 4); }
+const ends = extractColors({ data: ramp, width: 60, height: 10 }, 5).map((c) => classify(c.hex).L);
+assert.ok(Math.min(...ends) < 0.2 && Math.max(...ends) > 0.9);
 
 // Binary format headers and sizes.
 const cols = ['#0000FF', '#808080', '#FF7F00'];

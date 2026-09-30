@@ -1,4 +1,5 @@
 import { shuffle } from './anim.js';
+import { oklchToRgb, rgbToOklab, toOklch } from './oklab.js';
 
 // Pure color math. Colors travel as '#RRGGBB' strings; {r,g,b} is 0-255, hsl is h 0-360, s/l 0-1.
 
@@ -42,16 +43,6 @@ export function luminance(hex) {
 export const inkFor = (hex) => (luminance(hex) > 0.5 ? '#1B1A19' : '#F3F2F1');
 
 /**
- * Warm-positive, cool-negative: peaks at orange (30 degrees), bottoms out at blue. Saturation
- * counts in full from 0.2 up, so a muted or grayish color still reads warm or cool instead of
- * collapsing toward zero and letting lightness decide the order. True grays stay near 0.
- */
-export function temperature(hex) {
-  const { h, s } = hexToHsl(hex);
-  return Math.cos(((h - 30) * Math.PI) / 180) * Math.min(1, s / 0.2);
-}
-
-/**
  * The light hit on a bloxel: its own color a very little brighter, as a CSS color, for a
  * one font pixel line along its top edge. Faint on purpose: it only keeps dark blocks
  * (which sit at the ground color) reading as squares.
@@ -63,18 +54,6 @@ export function mix(hex, toward, amount) {
   const a = hexToRgb(hex), b = hexToRgb(toward);
   return rgbToHex({ r: a.r + (b.r - a.r) * amount, g: a.g + (b.g - a.g) * amount, b: a.b + (b.b - a.b) * amount });
 }
-
-/**
- * Indices of `hexes` in stack order, bottom row first: cool at the bottom rising to warm at
- * the top. That is the priority. Lightness only settles near-ties, keeping the ramp from
- * jumping in value: lighter above darker when `lightOnTop`, the reverse otherwise. Indices,
- * not colors, so duplicate colors keep distinct slots.
- */
-export const stackOrder = (hexes, lightOnTop) => {
-  const lift = lightOnTop ? 0.08 : -0.08;
-  const key = (i) => temperature(hexes[i]) + lift * luminance(hexes[i]);
-  return hexes.map((_, i) => i).sort((a, b) => key(a) - key(b));
-};
 
 /**
  * A run of `length` colors drawn from `colors`, every one shown as often as the others give or take
@@ -91,11 +70,13 @@ export function sequence(colors, length) {
   return out;
 }
 
-const clamp01 = (v) => Math.min(1, Math.max(0, v));
-
-/** Five subtle takes on one color; index 0 is the base. */
+/**
+ * Five subtle takes on one color, made in OKLCH so a step looks the same size on every color:
+ * the base, a touch darker and richer, a touch lighter and softer, and the hue nudged either way.
+ * Chroma is trimmed to stay in gamut rather than letting the clamp bend the hue. Index 0 is the base.
+ */
 export function variations(hex) {
-  const { h, s, l } = hexToHsl(hex);
-  const make = (dh, ds, dl) => hslToHex({ h: (h + dh + 360) % 360, s: clamp01(s + ds), l: clamp01(l + dl) });
-  return [hex, make(0, 0.05, -0.08), make(0, -0.05, 0.08), make(-10, 0, 0), make(10, 0, 0)];
+  const { L, C, h } = toOklch(rgbToOklab(hexToRgb(hex)));
+  const make = (dL, scale, dh) => rgbToHex(oklchToRgb({ L: Math.min(1, Math.max(0, L + dL)), C: C * scale, h: (h + dh + 360) % 360 }));
+  return [hex, make(-0.05, 1.06, 0), make(0.05, 0.94, 0), make(0, 1, -8), make(0, 1, 8)];
 }

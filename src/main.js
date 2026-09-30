@@ -1,6 +1,7 @@
-import { rand, randInt, sleep } from './anim.js';
-import { hexToRgb, sequence, stackOrder, variations } from './color.js';
-import { extractColors, lightOnTop } from './extract.js';
+import { rand, sleep } from './anim.js';
+import { arrange, decide } from './arrange.js';
+import { hexToRgb, sequence, variations } from './color.js';
+import { extractColors } from './extract.js';
 import { createQueue } from './queue.js';
 import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
 import { createCarousel } from './carousel.js';
@@ -37,13 +38,6 @@ let session = null;
 
 const carousel = createCarousel(track, () => repaint());
 const stage = createStage($('stage'), $('stage').querySelector('canvas'));
-
-/**
- * Seam for the future decision engine: given every slot's five candidates, return the index to
- * keep for each. Until then it is a coin toss between the base color and one of its subtle
- * variations, so the same image comes out a little different each time.
- */
-const choose = (slots) => slots.map((c) => (Math.random() < 0.5 ? 0 : randInt(1, c.length - 1)));
 
 /** Decodes the file into a working canvas capped at MAX_SIDE; the original is let go at once. */
 async function load(file) {
@@ -102,7 +96,6 @@ async function analyze(file, last) {
   const pixels = sample(work);
   const clusters = extractColors(pixels, CHIPS);
   if (!clusters.length) return;
-  const lightAtTop = lightOnTop(pixels);
 
   session = { scan: null };
   try {
@@ -115,11 +108,14 @@ async function analyze(file, last) {
     setStatus('ANALYZING');
     await bloxels.ripple(T.ripple);
 
+    // Every palette gets a temperature pattern and a shade pattern together (arrange.js), then each
+    // color keeps whichever of its five candidates makes the order fit its patterns best (decide).
     const bases = clusters.map((c) => c.hex);
-    const slotOf = []; // cluster index -> slot (0 = bottom row)
-    stackOrder(bases, lightAtTop).forEach((cluster, slot) => { slotOf[cluster] = slot; });
     const candidates = bases.map(variations);
-    const keep = choose(candidates);
+    const arrangement = arrange(bases);
+    const keep = decide(candidates, arrangement);
+    const slotOf = []; // cluster index -> slot (0 = bottom row); the plan lists the top row first
+    arrangement.order.forEach((cluster, row) => { slotOf[cluster] = CHIPS - 1 - row; });
 
     const stack = createStack(CHIPS);
     $('stack-host').append(stack.el);
@@ -130,11 +126,11 @@ async function analyze(file, last) {
     // What each chip will show is decided before anything moves, and the drone that hunts it goes to
     // the bloxel closest to that color: it comes to rest there, and only then does the chip shift.
     // When it parks, the chip lands on the kept color.
-    const plan = candidates.map((c) => sequence(c, T.hits[1] + 2));
+    const runs = candidates.map((c) => sequence(c, T.hits[1] + 2));
     const taken = clusters.map(() => 0);
     const landing = [];
     const scan = runScanners($('scanners'), bloxels, targets, {
-      next: (i) => { const hex = plan[i][taken[i]++]; return { hex, rgb: rgbOf(hex) }; },
+      next: (i) => { const hex = runs[i][taken[i]++]; return { hex, rgb: rgbOf(hex) }; },
       onStop: (i, hex) => { stack.swapTo(slotOf[i], hex); },
       onFinish: (i) => { landing.push(stack.swapTo(slotOf[i], candidates[i][keep[i]])); },
     }, T);
