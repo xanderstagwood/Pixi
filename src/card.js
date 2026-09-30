@@ -10,7 +10,7 @@ export const CELL = 16; // font pixels per bloxel
 export const CHIPS = 7;
 // The chips' left and right edges stop halfway through a bloxel, never lining up with one: 9
 // bloxels wide on a card an even number wide. Vertically they are centered to the pixel instead.
-const CHIP = { w: 144, h: 32, pitch: 44 };
+const CHIP = { w: 144, h: 32, pitch: 42 };
 export const CHIP_W = CHIP.w;
 const CHIPS_H = (CHIPS - 1) * CHIP.pitch + CHIP.h;
 const GRAY_5 = '#979693', INK = '#F3F2F1';
@@ -45,14 +45,14 @@ export const cardCells = () => cells;
 
 /**
  * Positions inside the card, in font pixels. A footer line runs along the bottom (the name at the left,
- * the credit at the right). The chips sit in the middle of the card, lifted half a bloxel so the footer
- * has its room; the block and the card are both whole font pixels, so every position is too. Sideways
+ * the credit at the right). The chips sit in the middle of the card, lifted half a bloxel less a third so the
+ * footer has its room; the block and the card are both whole font pixels, so every position is too. Sideways
  * they stay half a bloxel off the bloxel lines (see CHIP).
  */
 export function layout() {
   const w = cells.cols * CELL, h = cells.rows * CELL;
   const name = { x: 12, y: h - 24, w: 128, h: 16 };
-  return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: (h - CHIPS_H) / 2 - CELL / 2 } };
+  return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: (h - CHIPS_H) / 2 - CELL / 2 + Math.round(CELL / 3) } };
 }
 
 // Past the edge of a grid the picture is mirrored back, so a card is full of bloxels whatever size the viewport
