@@ -112,9 +112,10 @@ export function createBloxels(canvas, source, cardCells) {
     const [r, gr, b] = g.shown.subarray(i * 4, i * 4 + 3);
     ctx.fillStyle = `rgb(${r},${gr},${b})`;
     ctx.fillRect(x + off, y + off, size, size);
-    if (size < 3 * g.inset) return; // too small yet for a line along its top
+    if (size < 3 * g.inset) return; // too small yet for lines along its edges
     ctx.fillStyle = hit(r, gr, b);
-    ctx.fillRect(x + off, y + off, size, g.inset);
+    ctx.fillRect(x + off, y + off, size, g.inset); // the light hit along the top...
+    ctx.fillRect(x + off, y + off, g.inset, size); // ...and down the left
   };
   const paintCell = (i) => paintBlock(i, Math.round(g.full * easeOut(Math.min(1, (front - when(i)) / GROW))));
 

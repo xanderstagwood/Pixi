@@ -94,7 +94,8 @@ export function renderCard(canvas, palette, s, { ui = false, dim = false } = {})
       g.fillStyle = `rgb(${grid.rgb[i]},${grid.rgb[i + 1]},${grid.rgb[i + 2]})`;
       g.fillRect(x, y, cell - 2 * s, cell - 2 * s); // a font pixel on every side: two between blocks
       g.fillStyle = hit(grid.rgb[i], grid.rgb[i + 1], grid.rgb[i + 2]);
-      g.fillRect(x, y, cell - 2 * s, s); // the faint light hit along the top, as bloxel.js draws it
+      g.fillRect(x, y, cell - 2 * s, s); // the light hit along the top, as bloxel.js draws it...
+      g.fillRect(x, y, s, cell - 2 * s); // ...and down the left
     }
   }
 

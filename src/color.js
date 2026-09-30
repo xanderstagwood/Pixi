@@ -69,8 +69,8 @@ export function brighter(hex, strength = 1) {
   return lifted.get(key);
 }
 
-/** The light hit on a bloxel of this color (`brighter`, as a hex code). */
-export const hit = (r, g, b) => brighter(rgbToHex({ r, g, b }));
+/** The light hit on a bloxel of this color (`brighter`, as a hex code), a little stronger than the base step. */
+export const hit = (r, g, b) => brighter(rgbToHex({ r, g, b }), 1.3);
 
 /** Mix of `hex` toward `toward` ('#RRGGBB'), `amount` 0-1. */
 export function mix(hex, toward, amount) {
