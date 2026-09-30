@@ -27,9 +27,10 @@ function ghostOf(card) {
 
 /**
  * @param {HTMLElement} track holds the cards
- * @param {{canDrag: () => boolean, onReorder: (from: number, to: number) => void}} hooks indices count palette cards only
+ * @param {{canDrag: () => boolean, vertical: () => boolean, onReorder: (from: number, to: number) => void}} hooks
+ *        indices count palette cards only; `vertical`: the strip runs top to bottom, so slots follow Y
  */
-export function attachReorder(track, { canDrag, onReorder }) {
+export function attachReorder(track, { canDrag, vertical, onReorder }) {
   track.addEventListener('pointerdown', (e) => {
     const card = e.target.closest('.card.palette');
     if (e.button !== 0 || !card || e.target.closest('button, input') || !canDrag()) return;
@@ -40,8 +41,10 @@ export function attachReorder(track, { canDrag, onReorder }) {
     const startX = e.clientX, startY = e.clientY, rect = card.getBoundingClientRect();
     // Slots are hit-tested against resting positions: the siblings slide, and testing the
     // sliding ones made the target flip back and forth under a still pointer.
-    const ends = items.map((el) => el.getBoundingClientRect().right);
-    const step = items[1].getBoundingClientRect().left - items[0].getBoundingClientRect().left;
+    const down = vertical();
+    const edge = (el, far) => { const r = el.getBoundingClientRect(); return down ? (far ? r.bottom : r.top) : (far ? r.right : r.left); };
+    const ends = items.map((el) => edge(el, true));
+    const step = edge(items[1], false) - edge(items[0], false);
     const dpr = window.devicePixelRatio || 1;
     const snap = (v) => Math.round(v * dpr) / dpr; // keep the ghost on whole device pixels
     let ghost = null, hover = index;
@@ -55,7 +58,7 @@ export function attachReorder(track, { canDrag, onReorder }) {
       if (index < hover && k > index && k <= hover) shift = -1;
       else if (index > hover && k < index && k >= hover) shift = 1;
       el.style.transition = 'transform 120ms ease';
-      el.style.transform = shift ? `translateX(${shift * step}px)` : '';
+      el.style.transform = shift ? `translate${down ? 'Y' : 'X'}(${shift * step}px)` : '';
     });
 
     const end = () => {
@@ -78,7 +81,7 @@ export function attachReorder(track, { canDrag, onReorder }) {
       }
       ghost.style.left = `${snap(rect.left + ev.clientX - startX)}px`;
       ghost.style.top = `${snap(rect.top + ev.clientY - startY)}px`;
-      const slot = ends.findIndex((end) => ev.clientX < end); // past the last card, the last
+      const slot = ends.findIndex((end) => (down ? ev.clientY : ev.clientX) < end); // past the last card, the last
       hover = slot === -1 ? items.length - 1 : slot;
       preview();
     };

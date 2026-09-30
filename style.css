@@ -29,7 +29,7 @@
   /* --cw and --ch (font pixels) are set by main.js's applyLayout from the viewport size. */
   --card-w: calc(var(--cw, 320) * var(--px));
   --card-h: calc(var(--ch, 480) * var(--px));
-  --gap: calc(8 * var(--px));
+  --gap: calc(24 * var(--px));
   --morph: 600ms; /* keep equal to MORPH_MS in src/stage.js */
   --ease: cubic-bezier(0.645, 0.045, 0.355, 1);
 }
@@ -92,9 +92,22 @@ body {
 }
 #track.instant, #track.swiping { transition: none; }
 
+/* A narrow screen stacks the cards top to bottom. The gap holds the delete button under one
+   card and the export button over the next, so it is wide. */
+body.vertical { --gap: calc(128 * var(--px)); }
+body.vertical #track {
+  left: calc(var(--cx) - var(--card-w) / 2);
+  top: var(--cy);
+  width: var(--card-w);
+  height: auto;
+  flex-direction: column;
+  transform: translateY(calc(var(--i, 0) * (var(--card-h) + var(--gap)) * -1 - var(--card-h) / 2 + var(--drag, 0px)));
+}
+
 .card {
   position: relative;
-  flex: 0 0 var(--card-w);
+  flex: none;
+  width: var(--card-w);
   height: var(--card-h);
   background: var(--gray-12);
   cursor: pointer;

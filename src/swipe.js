@@ -6,19 +6,22 @@ const START_PX = 8; // movement before a touch counts as a swipe rather than a t
  * alone; the mouse drags cards instead (reorder.js). A long-press that has armed a card
  * reorder wins over a swipe.
  * @param {HTMLElement} track
- * @param {{canSwipe: () => boolean, index: () => number, onSettle: (index: number) => void}} hooks
+ * @param {{canSwipe: () => boolean, vertical: () => boolean, index: () => number, onSettle: (index: number) => void}} hooks
+ *        `vertical`: the strip runs top to bottom (a narrow screen), so the swipe follows Y
  */
-export function attachSwipe(track, { canSwipe, index, onSettle }) {
+export function attachSwipe(track, { canSwipe, vertical, index, onSettle }) {
   track.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' || e.button !== 0 || e.target.closest('button, input') || !canSwipe()) return;
-    const startX = e.clientX, t0 = performance.now(), dpr = window.devicePixelRatio || 1;
+    const down = vertical();
+    const pos = (ev) => (down ? ev.clientY : ev.clientX);
+    const start = pos(e), t0 = performance.now(), dpr = window.devicePixelRatio || 1;
     const [a, b] = track.children;
-    const step = b ? b.offsetLeft - a.offsetLeft : track.offsetWidth; // card plus gap, CSS px
+    const step = b ? (down ? b.offsetTop - a.offsetTop : b.offsetLeft - a.offsetLeft) : 1; // card plus gap, CSS px
     let dx = 0, swiping = false;
 
     const move = (ev) => {
       if (track.dataset.reorder) return finish(false);
-      dx = ev.clientX - startX;
+      dx = pos(ev) - start;
       if (!swiping) {
         if (Math.abs(dx) < START_PX) return;
         swiping = true;

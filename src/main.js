@@ -222,8 +222,30 @@ function copyChip(card, e) {
 /* ---- input ---- */
 
 const go = (i) => { if (idle()) carousel.focus(i); };
-attachReorder(track, { canDrag: idle, onReorder: (from, to) => carousel.move(from, to) });
-attachSwipe(track, { canSwipe: idle, index: () => carousel.index, onSettle: go });
+// A narrow screen stacks the cards top to bottom; a wide one lays them out left to right.
+const narrow = matchMedia('(max-width: 640px)');
+const vertical = () => narrow.matches;
+const applyAxis = () => document.body.classList.toggle('vertical', vertical());
+narrow.addEventListener('change', applyAxis);
+applyAxis();
+
+attachReorder(track, { canDrag: idle, vertical, onReorder: (from, to) => carousel.move(from, to) });
+attachSwipe(track, { canSwipe: idle, vertical, index: () => carousel.index, onSettle: go });
+
+// The wheel steps through the cards: a notch is a card, and a trackpad's small deltas add up to one.
+let wheelSum = 0, wheelLast = 0, wheelStep = 0;
+addEventListener('wheel', (e) => {
+  if (!idle() || e.target.closest?.('input')) return;
+  e.preventDefault();
+  const now = performance.now();
+  const d = vertical() || Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+  wheelSum = now - wheelLast > 200 ? d : wheelSum + d;
+  wheelLast = now;
+  if (Math.abs(wheelSum) < 60 || now - wheelStep < 220) return;
+  go(carousel.index + Math.sign(wheelSum));
+  wheelSum = 0;
+  wheelStep = now;
+}, { passive: false });
 
 // A long-press on touch would open the browser's image menu; a mouse right-click still gets it, to save the card.
 let touching = false;
@@ -241,9 +263,9 @@ track.addEventListener('click', (e) => {
 });
 
 addEventListener('keydown', (e) => {
-  if (e.target.matches('input')) return;
-  if (e.key === 'ArrowLeft') go(carousel.index - 1);
-  if (e.key === 'ArrowRight') go(carousel.index + 1);
+  if (e.target.matches?.('input')) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') go(carousel.index - 1);
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(carousel.index + 1);
 });
 
 $('file').addEventListener('change', (e) => {
