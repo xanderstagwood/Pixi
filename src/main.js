@@ -9,6 +9,7 @@ import { holdButton } from './hold.js';
 import { center, unit, watchPixelSnap } from './pixel.js';
 import { createStage } from './stage.js';
 import { createStack } from './stack.js';
+import { createStore } from './store.js';
 import { attachReorder } from './reorder.js';
 import { runScanners } from './scanners.js';
 import { attachSwipe } from './swipe.js';
@@ -37,6 +38,14 @@ const idle = () => app.status === 'IDLE' || app.status === 'CAROUSEL';
 let session = null;
 
 const carousel = createCarousel(track, () => repaint());
+
+// Cards are kept in the browser between visits (store.js); localStorage can throw where storage is blocked.
+let storage = null;
+try { storage = window.localStorage; } catch { /* no storage: cards last only this visit */ }
+const store = createStore(storage);
+const persist = () => store.save([...track.querySelectorAll('.card.palette')].map((c) => c.palette));
+let saveSoon = 0; // typing a name saves once it pauses, not on every key
+const persistSoon = () => { clearTimeout(saveSoon); saveSoon = setTimeout(persist, 400); };
 const stage = createStage($('stage'), $('stage').querySelector('canvas'));
 
 /** Decodes the file into a working canvas capped at MAX_SIDE; the original is let go at once. */
@@ -161,6 +170,7 @@ async function analyze(file, last) {
     card.style.visibility = '';
     stage.hide();
     $('stack-host').replaceChildren();
+    persist();
     // Not on touch (it would raise the keyboard), and not mid-batch (the next image is already coming).
     if (last && matchMedia('(pointer: fine)').matches) card.querySelector('.name').focus({ preventScroll: true });
   } catch (err) {
@@ -208,8 +218,8 @@ function burst(button) {
 function wire(card) {
   const p = card.palette, name = card.querySelector('.name'), dl = card.querySelector('.dl');
   name.value = p.name;
-  card.querySelector('.rm').addEventListener('click', () => { if (idle()) carousel.remove(card); });
-  name.addEventListener('input', () => { p.name = name.value; paintCard(card); });
+  card.querySelector('.rm').addEventListener('click', () => { if (idle()) carousel.remove(card).then(persist); });
+  name.addEventListener('input', () => { p.name = name.value; paintCard(card); persistSoon(); });
   name.addEventListener('keydown', (e) => { if (e.key === 'Enter') name.blur(); });
   holdButton(dl, {
     ms: T.chargeToBurst,
@@ -270,7 +280,7 @@ const applyAxis = () => document.body.classList.toggle('vertical', vertical());
 narrow.addEventListener('change', applyAxis);
 applyAxis();
 
-attachReorder(track, { canDrag: idle, vertical, onReorder: (from, to) => carousel.move(from, to) });
+attachReorder(track, { canDrag: idle, vertical, onReorder: (from, to) => { carousel.move(from, to); persist(); } });
 attachSwipe(track, { canSwipe: idle, vertical, index: () => carousel.index, onSettle: go });
 
 // The wheel steps through the cards: a notch is a card, and a trackpad's small deltas add up to one.
@@ -336,6 +346,17 @@ watchPixelSnap(() => {
 // Canvas text falls back to a plain font if it is drawn before the pixel font arrives, so
 // wait for the font before analysing, and redraw the cards whenever a font finishes loading.
 const fontReady = document.fonts.load('16px "Stagwood Sprite 64"');
+// Cards from earlier visits come back once the pixel font is ready to draw their text.
+fontReady.then(() => {
+  const kept = store.load();
+  for (const palette of kept) {
+    const card = carousel.insert(palette);
+    wire(card);
+    paintCard(card);
+    card.style.visibility = '';
+  }
+  if (kept.length) { carousel.focus(carousel.index, true); setStatus('CAROUSEL'); }
+});
 document.fonts.addEventListener('loadingdone', repaint);
 $('version-label').textContent = `Pixi v${VERSION}`;
 setStatus('IDLE');
