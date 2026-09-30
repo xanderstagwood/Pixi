@@ -72,18 +72,16 @@ export function brighter(hex, strength = 1) {
 /** The light hit on a bloxel of this color (`brighter`, as a hex code), a little stronger than the base step. */
 export const hit = (r, g, b) => brighter(rgbToHex({ r, g, b }), 1.3);
 
-const glints = new Map();
+const GLINT_STEP = 4.2; // the light hit's `brighter` strength at a full glint (amount 1)
 
 /**
- * A color `amount` (0 to 1) of the way from its own shade to a clearly brighter one, as {r, g, b}:
- * what a twinkling bloxel is drawn in. The bright end is `brighter()` at 4.2 times the hit's step, and an amount past 1 pushes on beyond it (a flare).
+ * A color lit by `amount` (0 to 1, and past 1 for a flare) as {r, g, b}: what a twinkling bloxel is drawn in.
+ * It is `brighter()`, the same OKLCH lift the light hits use, at `amount` times 4.2 strength, so a glint keeps
+ * its hue and chroma instead of washing toward white. Amounts are rounded to sixteenths so `brighter`'s cache stays small.
  */
 export function glint(r, g, b, amount) {
-  const key = (r << 16) | (g << 8) | b;
-  if (!glints.has(key)) glints.set(key, hexToRgb(brighter(rgbToHex({ r, g, b }), 4.2)));
-  const to = glints.get(key);
-  const mixed = (a, c) => Math.min(255, Math.max(0, Math.round(a + (c - a) * amount)));
-  return { r: mixed(r, to.r), g: mixed(g, to.g), b: mixed(b, to.b) };
+  const q = Math.round(amount * 16);
+  return q <= 0 ? { r, g, b } : hexToRgb(brighter(rgbToHex({ r, g, b }), (q / 16) * GLINT_STEP));
 }
 
 /** Mix of `hex` toward `toward` ('#RRGGBB'), `amount` 0-1. */
