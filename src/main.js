@@ -91,6 +91,7 @@ function cardRect() {
 
 async function analyze(file) {
   if (!idle()) return;
+  await fontReady;
   let work;
   try { work = await load(file); } catch { return; }
   const pixels = sample(work);
@@ -282,6 +283,10 @@ addEventListener('drop', (e) => {
   if (file) analyze(file);
 });
 
-document.fonts.load('16px "Stagwood Sprite 64"');
-watchPixelSnap(() => { applyLayout(); document.querySelectorAll('.card.palette').forEach(paintCard); });
+const repaint = () => document.querySelectorAll('.card.palette').forEach(paintCard);
+watchPixelSnap(() => { applyLayout(); repaint(); });
+// Canvas text falls back to a plain font if it is drawn before the pixel font arrives, so
+// wait for the font before analysing, and redraw the cards whenever a font finishes loading.
+const fontReady = document.fonts.load('16px "Stagwood Sprite 64"');
+document.fonts.addEventListener('loadingdone', repaint);
 setStatus('IDLE');
