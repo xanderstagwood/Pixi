@@ -12,6 +12,7 @@ import { attachReorder } from './reorder.js';
 import { runScanners } from './scanners.js';
 import { attachSwipe } from './swipe.js';
 import { buildZip } from './export/bundle.js';
+import { VERSION } from './version.js';
 
 const $ = (id) => document.getElementById(id);
 const track = $('track');
@@ -336,4 +337,5 @@ watchPixelSnap(() => {
 // wait for the font before analysing, and redraw the cards whenever a font finishes loading.
 const fontReady = document.fonts.load('16px "Stagwood Sprite 64"');
 document.fonts.addEventListener('loadingdone', repaint);
+$('version-label').textContent = `Pixi v${VERSION}`;
 setStatus('IDLE');
