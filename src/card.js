@@ -8,9 +8,10 @@ import { unit } from './pixel.js';
 
 export const CELL = 16; // font pixels per bloxel
 export const CHIPS = 7;
-// An odd number of bloxels wide (9), so with the card an even number of bloxels wide the
-// chips' left and right edges stop halfway through a bloxel instead of lining up with one.
-const CHIP = { w: 144, h: 32, pitch: 40 };
+// Every chip edge should stop halfway through a bloxel, never line up with one. Across: 9
+// bloxels wide on a card an even number wide. Down: two bloxels tall on a whole-bloxel
+// pitch, started half a bloxel in (see layout).
+const CHIP = { w: 144, h: 32, pitch: 48 };
 export const CHIP_W = CHIP.w;
 const CHIPS_H = (CHIPS - 1) * CHIP.pitch + CHIP.h;
 const GRAY_5 = '#979693', INK = '#F3F2F1';
@@ -32,18 +33,23 @@ export function fitCardCells() {
   const even = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.floor(v / 2) * 2));
   cells = {
     cols: even((root.clientWidth / css - 32) / CELL, 12, 20),
-    rows: even((root.clientHeight / css - 208) / CELL, 22, 30),
+    rows: even((root.clientHeight / css - 208) / CELL, 24, 30),
   };
   return cells;
 }
 
 export const cardCells = () => cells;
 
-/** Positions inside the card, in font pixels. The name sits near the bottom, the chips centered above it. */
+/**
+ * Positions inside the card, in font pixels. The name sits near the bottom, the chips above
+ * it, as near the middle as a half-bloxel start allows.
+ */
 export function layout() {
   const w = cells.cols * CELL, h = cells.rows * CELL;
   const name = { x: 16, y: h - 48, w: w - 32, h: 32 };
-  return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: Math.floor((name.y - CHIPS_H) / 2) } };
+  const half = CELL / 2;
+  const top = half + CELL * Math.max(0, Math.round(((name.y - CHIPS_H) / 2 - half) / CELL));
+  return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: top } };
 }
 
 const measure = document.createElement('canvas').getContext('2d');
