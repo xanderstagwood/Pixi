@@ -76,11 +76,11 @@ const glints = new Map();
 
 /**
  * A color `amount` (0 to 1) of the way from its own shade to a clearly brighter one, as {r, g, b}:
- * what a twinkling bloxel is drawn in. The bright end is `brighter()` at 3.4 times the hit's step, and an amount past 1 pushes on beyond it (a flare).
+ * what a twinkling bloxel is drawn in. The bright end is `brighter()` at 4.2 times the hit's step, and an amount past 1 pushes on beyond it (a flare).
  */
 export function glint(r, g, b, amount) {
   const key = (r << 16) | (g << 8) | b;
-  if (!glints.has(key)) glints.set(key, hexToRgb(brighter(rgbToHex({ r, g, b }), 3.4)));
+  if (!glints.has(key)) glints.set(key, hexToRgb(brighter(rgbToHex({ r, g, b }), 4.2)));
   const to = glints.get(key);
   const mixed = (a, c) => Math.min(255, Math.max(0, Math.round(a + (c - a) * amount)));
   return { r: mixed(r, to.r), g: mixed(g, to.g), b: mixed(b, to.b) };
