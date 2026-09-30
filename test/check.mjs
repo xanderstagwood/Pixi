@@ -5,6 +5,7 @@ import { stackOrder, mix, variations, hexToHsl } from '../src/color.js';
 import { extractColors, lightOnTop } from '../src/extract.js';
 import * as f from '../src/export/formats.js';
 import { zip } from '../src/export/zip.js';
+import { createQueue } from '../src/queue.js';
 
 // Temperature first, bottom to top: cool blue, then gray, then warm orange. Duplicates keep separate indices.
 assert.deepEqual(stackOrder(['#FF8000', '#0080FF', '#808080'], true), [1, 2, 0]);
@@ -51,5 +52,21 @@ const z = new Uint8Array(await blob.arrayBuffer());
 const dv = new DataView(z.buffer);
 assert.equal(dv.getUint16(z.length - 22 + 10, true), 2);
 assert.equal(dv.getUint32(14, true), nodeCrc(new TextEncoder().encode('hello')));
+
+// Queue: one at a time, in arrival order, late additions join the end, a failure does not stop the rest.
+const seen = [];
+let active = 0, most = 0;
+const q = createQueue(async (x, left) => {
+  active++; most = Math.max(most, active);
+  await new Promise((r) => setTimeout(r, 5));
+  seen.push(`${x}:${left}`);
+  active--;
+  if (x === 'b') throw new Error('boom');
+}, { onError: () => {} });
+q.add('a', 'b');
+q.add('c');
+await new Promise((r) => setTimeout(r, 100));
+assert.deepEqual(seen, ['a:1', 'b:1', 'c:0']);
+assert.equal(most, 1);
 
 console.log('ok');

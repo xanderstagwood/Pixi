@@ -1,6 +1,7 @@
 import { rand, shuffle, sleep } from './anim.js';
 import { hexToRgb, stackOrder, variations } from './color.js';
 import { extractColors, lightOnTop } from './extract.js';
+import { createQueue } from './queue.js';
 import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
 import { createCarousel } from './carousel.js';
 import { holdButton } from './hold.js';
@@ -92,7 +93,8 @@ function cardRect() {
   return new DOMRect(c.x - w / 2, c.y - h / 2, w, h);
 }
 
-async function analyze(file) {
+/** @param {boolean} last no more images are waiting, so the name field may take focus */
+async function analyze(file, last) {
   if (!idle()) return;
   await fontReady;
   let work;
@@ -152,7 +154,8 @@ async function analyze(file) {
     card.style.visibility = '';
     stage.hide();
     $('stack-host').replaceChildren();
-    if (matchMedia('(pointer: fine)').matches) card.querySelector('.name').focus({ preventScroll: true }); // not on touch: it would raise the keyboard
+    // Not on touch (it would raise the keyboard), and not mid-batch (the next image is already coming).
+    if (last && matchMedia('(pointer: fine)').matches) card.querySelector('.name').focus({ preventScroll: true });
   } catch (err) {
     console.error(err);
     stage.hide();
@@ -230,6 +233,10 @@ function copyChip(card, e) {
 
 /* ---- input ---- */
 
+// Images dropped or chosen together are analysed one after another, in the order given.
+const batch = createQueue((file, left) => analyze(file, left === 0), { pause: () => sleep(500) });
+const addImages = (files) => batch.add(...files.filter((f) => f.type.startsWith('image/')));
+
 const go = (i) => { if (idle()) carousel.focus(i); };
 // A narrow screen stacks the cards top to bottom; a wide one lays them out left to right.
 const narrow = matchMedia('(max-width: 640px)');
@@ -278,9 +285,9 @@ addEventListener('keydown', (e) => {
 });
 
 $('file').addEventListener('change', (e) => {
-  const [file] = e.target.files;
+  const files = [...e.target.files];
   e.target.value = '';
-  if (file) analyze(file);
+  addImages(files);
 });
 
 addEventListener('dragover', (e) => e.preventDefault());
@@ -289,8 +296,7 @@ addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.class
 addEventListener('drop', (e) => {
   e.preventDefault();
   document.body.classList.remove('dragging');
-  const file = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/'));
-  if (file) analyze(file);
+  addImages([...e.dataTransfer.files]);
 });
 
 const repaint = () => document.querySelectorAll('.card.palette').forEach(paintCard);
