@@ -1,6 +1,7 @@
 import { rand, shuffle, sleep } from './anim.js';
 import { hexToRgb, stackOrder, variations } from './color.js';
 import { extractColors, lightOnTop } from './extract.js';
+import { createProgress } from './progress.js';
 import { createQueue } from './queue.js';
 import { CHIPS, cardCells, cardPng, chipAt, fitCardCells, layout, renderCard } from './card.js';
 import { createCarousel } from './carousel.js';
@@ -32,6 +33,7 @@ const idle = () => app.status === 'IDLE' || app.status === 'CAROUSEL';
 let session = null;
 
 const carousel = createCarousel(track);
+const bar = createProgress($('progress'));
 const stage = createStage($('stage'), $('stage').querySelector('canvas'));
 
 /**
@@ -66,12 +68,14 @@ function sample(work, max = 200) {
 }
 
 /** Show each slot's five candidates one after another, ending on the one kept. */
-async function compare(stack, slot, candidates, keep) {
+async function compare(stack, slot, candidates, keep, onStep) {
   const seq = [...shuffle([1, 2, 3, 4]), keep].filter((c, k, a) => c !== a[k - 1]);
   await stack.swapTo(slot, candidates[0]);
+  onStep();
   for (const c of seq) {
     await sleep(rand(...T.dwell));
     await stack.swapTo(slot, candidates[c]);
+    onStep();
   }
 }
 
@@ -107,12 +111,16 @@ async function analyze(file, last) {
   session = { scan: null };
   try {
     carousel.focus(Infinity, true);
+    bar.reset();
     setStatus('EXPANDING');
-    const bloxels = await stage.open(work, cardRect(), cardCells);
+    const opening = stage.open(work, cardRect(), cardCells);
+    bar.to(0.05, 600);
+    const bloxels = await opening;
 
     work.width = work.height = 0; // the source pixels are spent: the bloxel grid holds all that is kept
 
     setStatus('ANALYZING');
+    bar.to(0.2, T.ripple * 1.14); // the wave takes its sweep plus the time the last block needs to grow
     await bloxels.ripple(T.ripple);
 
     const bases = clusters.map((c) => c.hex);
@@ -127,14 +135,22 @@ async function analyze(file, last) {
 
     const targets = clusters.map((c) => ({ rgb: Object.values(hexToRgb(c.hex)), fx: c.x, fy: c.y }));
     const comparing = [];
+    // The bar's middle stretch counts real work: each drone parking and each chip swap.
+    const units = CHIPS * 6;
+    let worked = 0;
+    const step = () => bar.to(0.2 + 0.6 * Math.min(1, ++worked / units), 400);
     const scan = runScanners($('scanners'), bloxels, targets, (i) => {
-      comparing.push(compare(stack, slotOf[i], candidates[i], keep[i]));
+      step();
+      comparing.push(compare(stack, slotOf[i], candidates[i], keep[i], step));
     }, T);
     session.scan = scan;
     await scan.finished;
     await Promise.all(comparing);
+    bar.to(0.8, 200); // in case the counted steps came up short
 
+    bar.to(0.92, CHIPS * T.lockGap + 360);
     await Promise.all(clusters.map((_, slot) => sleep(slot * T.lockGap).then(() => stack.lock(slot))));
+    bar.to(1, T.hold);
     await sleep(T.hold);
     scan.clear();
 
@@ -306,6 +322,7 @@ watchPixelSnap(() => {
   if (session) { // the viewport changed mid-analysis: re-lay the grid, then the drones onto it
     stage.relayout();
     session.scan?.refit();
+    bar.refit();
   }
 });
 // Canvas text falls back to a plain font if it is drawn before the pixel font arrives, so
