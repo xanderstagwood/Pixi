@@ -20,7 +20,7 @@
   --gray-5: #979693;
   --gray-7: #484644;
   --gray-8: #3B3A39;
-  --gray-9: #323130;
+  --gray-9: #323130; /* the resting color of every button icon */
   --gray-11: #252423;
   --gray-12: #201F1E;
   --gray-13: #1B1A19;
@@ -29,7 +29,7 @@
   /* --cw and --ch (font pixels) are set by main.js's applyLayout from the viewport size. */
   --card-w: calc(var(--cw, 320) * var(--px));
   --card-h: calc(var(--ch, 480) * var(--px));
-  --gap: calc(2 * var(--px));
+  --gap: calc(8 * var(--px));
   --morph: 600ms; /* keep equal to MORPH_MS in src/stage.js */
   --ease: cubic-bezier(0.645, 0.045, 0.355, 1);
 }
@@ -99,12 +99,13 @@ body {
   transition: opacity 300ms;
 }
 .card:not(.focus) { opacity: 0.5; }
+.card.palette { box-shadow: 0 calc(4 * var(--px)) calc(12 * var(--px)) rgba(0, 0, 0, 0.4); }
 .card.dragging { opacity: 0.4; }
 /* Reorder ghost: follows the pointer, offset set inline by src/reorder.js. */
 .card.drag-ghost { position: fixed; margin: 0; z-index: 50; opacity: 0.9; pointer-events: none; transition: none; }
 body.grabbing, body.grabbing * { cursor: grabbing !important; }
 
-.card.add { display: grid; place-items: center; --icon-color: var(--gray-7); }
+.card.add { display: grid; place-items: center; --icon-color: var(--gray-9); }
 .card.add .icon { --icon-px: calc(4 * var(--px)); }
 .card.add:hover { background: var(--gray-11); --icon-color: var(--gray-1); }
 body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outline-offset: calc(-2 * var(--px)); }
@@ -148,7 +149,7 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 }
 .dl { top: calc(100% + 24 * var(--px)); }
 .rm { top: calc(-56 * var(--px)); }
-.dl .icon, .rm .icon { --icon-px: calc(3 * var(--px)); --icon-color: var(--gray-7); }
+.dl .icon, .rm .icon { --icon-px: calc(3 * var(--px)); --icon-color: var(--gray-9); }
 .dl:hover .icon, .dl:focus-visible .icon, .rm:hover .icon, .rm:focus-visible .icon { --icon-color: var(--gray-1); }
 .dl.charging .icon { --icon-color: color-mix(in srgb, var(--accent) calc(var(--charge) * 100%), var(--gray-1)); }
 .dl:focus-visible, .rm:focus-visible { outline: calc(2 * var(--px)) solid var(--accent); outline-offset: calc(-2 * var(--px)); }
@@ -187,7 +188,7 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
   flex-direction: column-reverse; /* slot 0 (darkest) at the bottom */
   gap: calc(8 * var(--px));
 }
-.slot { position: relative; height: calc(32 * var(--px)); overflow: hidden; }
+.slot { position: relative; height: calc(32 * var(--px)); overflow: hidden; box-shadow: 0 calc(2 * var(--px)) calc(6 * var(--px)) rgba(0, 0, 0, 0.4); } /* as card.js's chip shadow */
 .chip {
   position: absolute;
   inset: 0;
