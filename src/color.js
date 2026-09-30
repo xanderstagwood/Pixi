@@ -39,10 +39,14 @@ export function luminance(hex) {
 
 export const inkFor = (hex) => (luminance(hex) > 0.5 ? '#1B1A19' : '#F3F2F1');
 
-/** Warm-positive, cool-negative. Peaks at orange (30 degrees); grays sit near 0. */
+/**
+ * Warm-positive, cool-negative: peaks at orange (30 degrees), bottoms out at blue. Saturation
+ * counts in full from 0.2 up, so a muted or grayish color still reads warm or cool instead of
+ * collapsing toward zero and letting lightness decide the order. True grays stay near 0.
+ */
 export function temperature(hex) {
   const { h, s } = hexToHsl(hex);
-  return Math.cos(((h - 30) * Math.PI) / 180) * s;
+  return Math.cos(((h - 30) * Math.PI) / 180) * Math.min(1, s / 0.2);
 }
 
 /** Mix of `hex` toward `toward` ('#RRGGBB'), `amount` 0-1. */
@@ -58,7 +62,7 @@ export function mix(hex, toward, amount) {
  * not colors, so duplicate colors keep distinct slots.
  */
 export const stackOrder = (hexes, lightOnTop) => {
-  const lift = lightOnTop ? 0.15 : -0.15;
+  const lift = lightOnTop ? 0.08 : -0.08;
   const key = (i) => temperature(hexes[i]) + lift * luminance(hexes[i]);
   return hexes.map((_, i) => i).sort((a, b) => key(a) - key(b));
 };

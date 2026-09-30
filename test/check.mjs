@@ -9,6 +9,8 @@ import { zip } from '../src/export/zip.js';
 // Temperature first, bottom to top: cool blue, then gray, then warm orange. Duplicates keep separate indices.
 assert.deepEqual(stackOrder(['#FF8000', '#0080FF', '#808080'], true), [1, 2, 0]);
 assert.deepEqual(stackOrder(['#0000FF', '#0000FF'], true).sort(), [0, 1]);
+// A real palette that came out jumbled: muted purples and grays must still run warm to cool, top to bottom.
+assert.deepEqual(stackOrder(['#262421', '#443E44', '#B253BC', '#A7AEB5', '#5C5E66', '#7F3E87', '#70878F'], true), [6, 3, 4, 5, 2, 1, 0]);
 // Lightness only breaks near-ties: light above dark, or the reverse.
 assert.deepEqual(stackOrder(['#EEEEEE', '#222222'], true), [1, 0]);
 assert.deepEqual(stackOrder(['#EEEEEE', '#222222'], false), [0, 1]);
