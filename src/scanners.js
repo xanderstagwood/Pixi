@@ -1,0 +1,105 @@
+import { frames, rand, randInt, sleep } from './anim.js';
+
+const SIZE = 1; // scanner outline is SIZE x SIZE cells: one bloxel
+
+/**
+ * Seven square drones hop across the block grid. Each hunts one color cluster: it
+ * roams, counts matching cells it lands on, then flies to the cluster's real spot and
+ * parks there. `onFinish(i)` fires as each parks; the promise resolves when all have.
+ * @param {HTMLElement} host positioned layer the drones live in
+ * @param {ReturnType<import('./bloxel.js').createBloxels>} grid
+ * @param {{rgb: number[], cx: number, cy: number}[]} targets one per cluster
+ * @param {{stagger: number, roam: [number, number]}} timing ms between launches; range of roam time per drone
+ */
+export function runScanners(host, grid, targets, onFinish, { stagger, roam }) {
+  const { cols, rows, cell, origin } = grid;
+  const owner = Uint8Array.from({ length: cols * rows }, (_, i) => {
+    const c = grid.rgb(i);
+    let best = 0, bd = Infinity;
+    targets.forEach((t, j) => {
+      const d = (c[0] - t.rgb[0]) ** 2 + (c[1] - t.rgb[1]) ** 2 + (c[2] - t.rgb[2]) ** 2;
+      if (d < bd) { bd = d; best = j; }
+    });
+    return best;
+  });
+  const mine = targets.map((_, j) => owner.reduce((a, o, i) => (o === j ? (a.push(i), a) : a), []));
+
+  const ease = (u) => (u < 0.5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2);
+  const place = (s) => {
+    const half = (SIZE - 1) / 2;
+    const x = origin.x + (Math.round(s.cx) - half) * cell, y = origin.y + (Math.round(s.cy) - half) * cell;
+    s.el.style.transform = `translate(${x}px, ${y}px)`;
+  };
+  const hop = (s, cx, cy, now) => {
+    s.from = { cx: s.cx, cy: s.cy };
+    s.to = { cx, cy };
+    s.t0 = now;
+    s.dur = Math.min(900, 260 + Math.hypot(cx - s.cx, cy - s.cy) * 16);
+  };
+
+  const now0 = performance.now();
+  const drones = targets.map((t, i) => {
+    const el = document.createElement('div');
+    el.className = 'scanner';
+    el.style.width = el.style.height = `${SIZE * cell}px`;
+    host.append(el);
+    const s = {
+      i, el, cx: randInt(0, cols - 1), cy: randInt(0, rows - 1), hits: 0, need: randInt(3, 5),
+      startAt: now0 + i * stagger, deadline: now0 + i * stagger + rand(...roam), homing: false, done: false, t0: 0, dur: 1,
+    };
+    s.from = s.to = { cx: s.cx, cy: s.cy };
+    el.style.opacity = '0';
+    place(s);
+    return s;
+  });
+
+  const finished = frames((_, now) => {
+    for (const s of drones) {
+      if (s.done || now < s.startAt) continue;
+      if (!s.started) {
+        s.started = true;
+        s.el.style.opacity = '1';
+        s.el.animate([{ scale: 0 }, { scale: 1 }], { duration: 200, easing: 'steps(4)' });
+        hop(s, s.cx, s.cy, now);
+      }
+      const u = Math.min(1, (now - s.t0) / s.dur);
+      s.cx = s.from.cx + (s.to.cx - s.from.cx) * ease(u);
+      s.cy = s.from.cy + (s.to.cy - s.from.cy) * ease(u);
+      place(s);
+      if (u < 1) continue;
+
+      if (s.homing) {
+        s.done = true;
+        s.el.classList.add('parked');
+        s.el.animate([{ background: 'rgba(243,242,241,0.6)' }, { background: 'rgba(243,242,241,0)' }], { duration: 300 });
+        onFinish(s.i);
+        continue;
+      }
+      if (owner[s.to.cy * cols + s.to.cx] === s.i) {
+        s.hits++;
+        s.el.animate([{ background: 'rgba(243,242,241,0.4)' }, { background: 'rgba(243,242,241,0)' }], { duration: 180 });
+      }
+      if (s.hits >= s.need || now >= s.deadline) {
+        s.homing = true;
+        hop(s, targets[s.i].cx, targets[s.i].cy, now);
+      } else if (Math.random() < 0.5 && mine[s.i].length) {
+        const c = mine[s.i][randInt(0, mine[s.i].length - 1)];
+        hop(s, c % cols, Math.floor(c / cols), now);
+      } else {
+        const near = (v, max) => Math.min(max - 1, Math.max(0, Math.round(v + rand(-10, 10))));
+        hop(s, near(s.cx, cols), near(s.cy, rows), now);
+      }
+    }
+    return drones.every((s) => s.done);
+  });
+
+  return {
+    finished,
+    /** Fade the drones out and remove them. */
+    async clear() {
+      drones.forEach((s) => s.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'steps(4)', fill: 'forwards' }));
+      await sleep(300);
+      host.replaceChildren();
+    },
+  };
+}

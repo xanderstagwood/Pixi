@@ -1,0 +1,41 @@
+// Run: node test/check.mjs. Smallest checks that fail if the pure logic breaks.
+import assert from 'node:assert/strict';
+import { crc32 as nodeCrc } from 'node:zlib';
+import { darkToLight, mix, variations, hexToHsl } from '../src/color.js';
+import { extractColors } from '../src/extract.js';
+import * as f from '../src/export/formats.js';
+import { zip } from '../src/export/zip.js';
+
+// Value ramp: black, then gray, then white. Duplicates keep separate indices.
+assert.deepEqual(darkToLight(['#FFFFFF', '#000000', '#808080']), [1, 2, 0]);
+assert.deepEqual(darkToLight(['#0000FF', '#0000FF']).sort(), [0, 1]);
+assert.equal(mix('#000000', '#FFFFFF', 0.5), '#808080');
+
+// Five variations, base first, hue shifts wrap.
+const v = variations('#FF0000');
+assert.equal(v.length, 5);
+assert.equal(v[0], '#FF0000');
+assert.ok(Math.abs(hexToHsl(v[3]).h - 350) < 1 && Math.abs(hexToHsl(v[4]).h - 10) < 1);
+
+// Two flat halves extract to their own colors, at a coordinate inside their half.
+const w = 20, h = 10, data = new Uint8ClampedArray(w * h * 4);
+for (let i = 0; i < w * h; i++) data.set(i % w < 10 ? [255, 0, 0, 255] : [0, 0, 255, 255], i * 4);
+const got = extractColors({ data, width: w, height: h }, 2);
+assert.deepEqual(got.map((c) => c.hex).sort(), ['#0000FF', '#FF0000']);
+assert.ok(got.find((c) => c.hex === '#FF0000').x < 0.5 && got.find((c) => c.hex === '#0000FF').x > 0.5);
+
+// Binary format headers and sizes.
+const cols = ['#0000FF', '#808080', '#FF7F00'];
+assert.equal(new TextDecoder().decode(f.ase(cols).slice(0, 4)), 'ASEF');
+assert.equal(f.act(cols).length, 772);
+assert.equal(f.aco(cols).length, 4 + 3 * 10 + 4 + 3 * (10 + 4 + 14));
+assert.match(f.pal(cols), /^JASC-PAL\r\n0100\r\n3\r\n/);
+
+// Zip: end record counts entries, each entry's stored CRC matches its bytes.
+const blob = zip([{ name: 'a/x.txt', data: new TextEncoder().encode('hello') }, { name: 'b.bin', data: f.act(cols) }]);
+const z = new Uint8Array(await blob.arrayBuffer());
+const dv = new DataView(z.buffer);
+assert.equal(dv.getUint16(z.length - 22 + 10, true), 2);
+assert.equal(dv.getUint32(14, true), nodeCrc(new TextEncoder().encode('hello')));
+
+console.log('ok');

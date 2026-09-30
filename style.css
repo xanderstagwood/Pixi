@@ -1,0 +1,201 @@
+@font-face {
+  font-family: 'Stagwood Sprite 64';
+  src: url('fonts/stagwood-sprite-64.ttf') format('truetype');
+  font-display: block;
+}
+
+/*
+ * Every length is a multiple of --px, one pixel of the pixel font, which pixel.js sets
+ * to a whole number of device pixels. That is what keeps every edge and glyph sharp.
+ * --cx and --cy are the viewport centre, also snapped to a device pixel.
+ * Colors are the Sprite editor's flat gray ramp and red accent; nothing here is a gradient.
+ */
+:root {
+  --px: 1px;
+  --cx: 50vw;
+  --cy: 50vh;
+
+  --gray-0: #FFFFFF;
+  --gray-1: #F3F2F1;
+  --gray-5: #979693;
+  --gray-7: #484644;
+  --gray-8: #3B3A39;
+  --gray-9: #323130;
+  --gray-11: #252423;
+  --gray-12: #201F1E;
+  --gray-13: #1B1A19;
+  --accent: #BE1425;
+
+  --card-w: calc(320 * var(--px));
+  --card-h: calc(480 * var(--px));
+  --gap: calc(2 * var(--px));
+  --morph: 600ms; /* keep equal to MORPH_MS in src/stage.js */
+  --ease: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+* { box-sizing: border-box; margin: 0; border-radius: 0; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--gray-13);
+  color: var(--gray-1);
+  font-family: 'Stagwood Sprite 64', monospace;
+  font-size: calc(16 * var(--px));
+  line-height: calc(16 * var(--px));
+  -webkit-font-smoothing: none;
+  user-select: none;
+}
+
+/* ---- icons: Sprite's 6x6 pixel-art SVGs as masks, filled with their own color ---- */
+
+.icon {
+  display: block;
+  --icon-px: calc(2 * var(--px));
+  width: calc(6 * var(--icon-px));
+  height: calc(6 * var(--icon-px));
+  background: var(--icon-color, currentColor);
+  -webkit-mask: var(--mask) center / 100% 100% no-repeat;
+  mask: var(--mask) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.icon--new { --mask: url(icons/new.svg); transform: translateY(calc(var(--icon-px) / -2)); } /* its top row is empty */
+.icon--export { --mask: url(icons/export.svg); }
+.icon--remove { --mask: url(icons/remove.svg); }
+.icon--pixi { --mask: url(icons/pixi.svg); }
+
+#logo {
+  position: fixed;
+  --icon-px: calc(4 * var(--px));
+  --icon-color: var(--gray-7);
+  left: calc(var(--cx) - 12 * var(--px));
+  top: calc(24 * var(--px));
+  z-index: 5;
+}
+
+/* ---- carousel ---- */
+
+#carousel { position: fixed; inset: 0; overflow: hidden; }
+
+#track {
+  position: absolute;
+  left: var(--cx);
+  top: calc(var(--cy) - var(--card-h) / 2);
+  height: var(--card-h);
+  display: flex;
+  gap: var(--gap);
+  transform: translateX(calc(var(--i, 0) * (var(--card-w) + var(--gap)) * -1 - var(--card-w) / 2));
+  transition: transform var(--morph) var(--ease);
+}
+#track.instant { transition: none; }
+
+.card {
+  position: relative;
+  flex: 0 0 var(--card-w);
+  height: var(--card-h);
+  background: var(--gray-12);
+  cursor: pointer;
+  transition: opacity 300ms;
+}
+.card:not(.focus) { opacity: 0.5; }
+.card.dragging { opacity: 0.4; }
+/* Reorder ghost: follows the pointer, offset set inline by src/reorder.js. */
+.card.drag-ghost { position: fixed; margin: 0; z-index: 50; opacity: 0.9; pointer-events: none; transition: none; }
+body.grabbing, body.grabbing * { cursor: grabbing !important; }
+
+.card.add { display: grid; place-items: center; --icon-color: var(--gray-7); }
+.card.add .icon { --icon-px: calc(4 * var(--px)); }
+.card.add:hover { background: var(--gray-11); --icon-color: var(--gray-1); }
+body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outline-offset: calc(-2 * var(--px)); }
+
+.card canvas { display: block; width: var(--card-w); height: var(--card-h); }
+
+/* Sits over the name drawn into the canvas (src/card.js NAME: x 16, y 372, 288 x 32, in a 32px face). */
+.name {
+  position: absolute;
+  left: calc(16 * var(--px));
+  top: calc(372 * var(--px));
+  width: calc(288 * var(--px));
+  height: calc(32 * var(--px));
+  font-size: calc(32 * var(--px));
+  line-height: calc(32 * var(--px));
+  padding: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  color: transparent; /* the canvas draws the text; this only supplies the caret and typing */
+  caret-color: var(--gray-1);
+  text-align: center;
+  font-family: inherit;
+}
+.name::selection { background: var(--accent); color: transparent; }
+
+/* ---- icon buttons on each palette card: delete above, export below. Dim, lit on hover; export goes red while held ---- */
+
+.dl, .rm {
+  position: absolute;
+  left: calc(50% - 24 * var(--px));
+  width: calc(48 * var(--px));
+  height: calc(32 * var(--px));
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  translate: calc(var(--shake, 0) * var(--px)) 0;
+}
+.dl { top: calc(100% + 24 * var(--px)); }
+.rm { top: calc(-56 * var(--px)); }
+.dl .icon, .rm .icon { --icon-px: calc(3 * var(--px)); --icon-color: var(--gray-7); }
+.dl:hover .icon, .dl:focus-visible .icon, .rm:hover .icon, .rm:focus-visible .icon { --icon-color: var(--gray-1); }
+.dl.charging .icon { --icon-color: color-mix(in srgb, var(--accent) calc(var(--charge) * 100%), var(--gray-1)); }
+.dl:focus-visible, .rm:focus-visible { outline: calc(2 * var(--px)) solid var(--accent); outline-offset: calc(-2 * var(--px)); }
+
+.spark { position: fixed; left: 0; top: 0; width: calc(4 * var(--px)); height: calc(4 * var(--px)); background: var(--accent); pointer-events: none; z-index: 40; }
+
+/* ---- analysis stage ---- */
+
+#stage { position: fixed; inset: 0; z-index: 10; overflow: hidden; background: var(--gray-13); }
+#stage[hidden] { display: none; }
+#stage canvas { position: absolute; left: 0; top: 0; }
+
+#scanners { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+.scanner { position: absolute; left: 0; top: 0; border: calc(2 * var(--px)) solid var(--gray-1); }
+.scanner.parked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(4 * var(--px));
+  height: calc(4 * var(--px));
+  margin: calc(-2 * var(--px)) 0 0 calc(-2 * var(--px));
+  background: var(--gray-1);
+}
+
+#stack-host { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+
+/* ---- the chips while analysis runs; src/card.js draws the same rows into the finished card ---- */
+
+.stack {
+  position: absolute;
+  left: calc(var(--cx) - 80 * var(--px));
+  top: calc(var(--cy) - 164 * var(--px));
+  width: calc(160 * var(--px));
+  display: flex;
+  flex-direction: column-reverse; /* slot 0 (darkest) at the bottom */
+  gap: calc(8 * var(--px));
+}
+.slot { position: relative; height: calc(32 * var(--px)); overflow: hidden; }
+.chip {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 calc(8 * var(--px));
+  background: var(--c);
+  color: var(--ink);
+  border-top: var(--px) solid color-mix(in srgb, var(--c) 75%, white);
+  border-bottom: var(--px) solid color-mix(in srgb, var(--c) 60%, black);
+}
+.flash { position: absolute; inset: 0; border: calc(2 * var(--px)) solid var(--gray-0); pointer-events: none; }
