@@ -196,9 +196,9 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 
 .stack {
   position: absolute;
-  left: calc(var(--cx) - var(--card-w) / 2 + var(--sx, 80) * var(--px));
+  left: calc(var(--cx) - var(--card-w) / 2 + var(--sx, 88) * var(--px));
   top: calc(var(--cy) - var(--card-h) / 2 + var(--sy, 80) * var(--px));
-  width: calc(160 * var(--px));
+  width: calc(var(--kw, 144) * var(--px));
   display: flex;
   flex-direction: column-reverse; /* slot 0 (darkest) at the bottom */
   gap: calc(8 * var(--px));

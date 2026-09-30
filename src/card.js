@@ -8,7 +8,9 @@ import { unit } from './pixel.js';
 
 export const CELL = 16; // font pixels per bloxel
 export const CHIPS = 7;
-const CHIP = { w: 160, h: 32, pitch: 40 };
+// An odd number of bloxels wide (9), so with the card an even number of bloxels wide the
+// chips' left and right edges stop halfway through a bloxel instead of lining up with one.
+const CHIP = { w: 144, h: 32, pitch: 40 };
 export const CHIP_W = CHIP.w;
 const CHIPS_H = (CHIPS - 1) * CHIP.pitch + CHIP.h;
 const GRAY_5 = '#979693', INK = '#F3F2F1';

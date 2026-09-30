@@ -77,7 +77,7 @@ const paintCard = (card) => renderCard(card.querySelector('canvas'), card.palett
 function applyLayout() {
   fitCardCells();
   const L = layout(), root = document.documentElement.style;
-  for (const [name, v] of Object.entries({ cw: L.w, ch: L.h, sx: L.chips.x, sy: L.chips.y, nx: L.name.x, ny: L.name.y, nw: L.name.w })) {
+  for (const [name, v] of Object.entries({ cw: L.w, ch: L.h, kw: L.chips.w, sx: L.chips.x, sy: L.chips.y, nx: L.name.x, ny: L.name.y, nw: L.name.w })) {
     root.setProperty(`--${name}`, v);
   }
 }
