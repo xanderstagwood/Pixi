@@ -112,7 +112,7 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; }
 .card.add:hover { background: var(--gray-11); --icon-color: var(--gray-1); }
 body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outline-offset: calc(-2 * var(--px)); }
 
-.card canvas { display: block; width: var(--card-w); height: var(--card-h); }
+.card canvas { display: block; width: var(--card-w); height: var(--card-h); image-rendering: pixelated; } /* never smoothed: smoothing rings light and dark along block edges */
 
 /* Sits over the name drawn into the canvas (src/card.js layout().name), in a 32px face. */
 .name {
@@ -162,7 +162,7 @@ body.dragging .card.add { outline: calc(2 * var(--px)) solid var(--accent); outl
 
 #stage { position: fixed; inset: 0; z-index: 10; overflow: hidden; background: var(--gray-13); }
 #stage[hidden] { display: none; }
-#stage canvas { position: absolute; left: 0; top: 0; }
+#stage canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
 
 #scanners { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
 .scanner { position: absolute; left: 0; top: 0; border: calc(2 * var(--px)) solid var(--gray-1); }

@@ -1,7 +1,7 @@
 import { frames } from './anim.js';
+import { GROUND } from './color.js';
 import { centerDev } from './pixel.js';
 
-const BG = '#1B1A19';
 const CELL_PX = 16; // font pixels per bloxel
 const GROW = 0.14; // share of the sweep a block takes to grow to full size
 const easeOut = (u) => 1 - (1 - u) ** 3;
@@ -53,7 +53,7 @@ export function createBloxels(canvas, source, { dpr, n: unit }, card) {
   // The image at rest, drawn first and then let go: the wave only ever paints over it.
   const base = Object.assign(document.createElement('canvas'), { width: W, height: H });
   const bctx = base.getContext('2d');
-  bctx.fillStyle = BG;
+  bctx.fillStyle = GROUND;
   bctx.fillRect(0, 0, W, H);
   bctx.drawImage(source, srcX, srcY, srcW, srcH, ox, oy, cols * cell, rows * cell);
 
@@ -73,7 +73,7 @@ export function createBloxels(canvas, source, { dpr, n: unit }, card) {
   /** A block of `size` device px, centered in its cell's footprint, on the dark ground. */
   const paintBlock = (i, size) => {
     const x = ox + (i % cols) * cell, y = oy + Math.floor(i / cols) * cell;
-    ctx.fillStyle = BG;
+    ctx.fillStyle = GROUND;
     ctx.fillRect(x, y, cell, cell);
     if (size <= 0) return;
     const off = inset + Math.floor((full - size) / 2);

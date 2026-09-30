@@ -1,5 +1,8 @@
 // Pure color math. Colors travel as '#RRGGBB' strings; {r,g,b} is 0-255, hsl is h 0-360, s/l 0-1.
 
+/** The ground between bloxels: the darkest color in the UI (Sprite's --gray-13), almost black but not quite. */
+export const GROUND = '#1B1A19';
+
 export const hexToRgb = (hex) => {
   const n = parseInt(hex.slice(1), 16);
   return { r: n >> 16, g: (n >> 8) & 255, b: n & 255 };

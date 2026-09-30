@@ -1,4 +1,4 @@
-import { inkFor, mix } from './color.js';
+import { GROUND, inkFor, mix } from './color.js';
 import { unit } from './pixel.js';
 
 // The finished palette card, drawn straight to a canvas in font-pixel units (see pixel.js)
@@ -11,7 +11,7 @@ export const CHIPS = 7;
 const CHIP = { w: 160, h: 32, pitch: 40 };
 export const CHIP_W = CHIP.w;
 const CHIPS_H = (CHIPS - 1) * CHIP.pitch + CHIP.h;
-const GRAY_13 = '#1B1A19', GRAY_5 = '#979693', INK = '#F3F2F1';
+const GRAY_5 = '#979693', INK = '#F3F2F1';
 export const EXPORT_SCALE = 4;
 // A 6px capital centered between the 1px highlight and the 1px shadow sits on this baseline;
 // the 32px name's 12px capitals are centered in their 32px line.
@@ -66,7 +66,7 @@ export function renderCard(canvas, palette, s, { ui = false } = {}) {
   canvas.width = L.w * s;
   canvas.height = L.h * s;
   const g = canvas.getContext('2d');
-  g.fillStyle = GRAY_13;
+  g.fillStyle = GROUND;
   g.fillRect(0, 0, canvas.width, canvas.height);
 
   // The window onto the grid: cells outside it (a small image) stay dark.
