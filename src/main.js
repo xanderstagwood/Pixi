@@ -23,6 +23,9 @@ const T = {
   chargeToBurst: 1200,
 };
 const MAX_SIDE = 2048; // the working copy of a huge image never exceeds this
+// Limits on what is accepted at all, so five huge files cannot strain a phone or a small laptop.
+const MAX_BYTES = 25 * 1024 * 1024; // per file, so at most 125MB in a batch
+const MAX_PIXELS = 64e6; // 8000 x 8000
 
 const app = { status: 'IDLE' };
 const setStatus = (s) => { app.status = s; document.body.dataset.status = s; };
@@ -46,7 +49,12 @@ async function load(file) {
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.src = url;
-  try { await img.decode(); } finally { URL.revokeObjectURL(url); }
+  try {
+    // Size is known once the header is read; check it before paying to decode a huge picture.
+    await new Promise((done, fail) => { img.onload = done; img.onerror = fail; });
+    if (img.naturalWidth * img.naturalHeight > MAX_PIXELS) throw new Error('image too large');
+    await img.decode();
+  } finally { URL.revokeObjectURL(url); }
   const s = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
   const work = Object.assign(document.createElement('canvas'), {
     width: Math.max(1, Math.round(img.naturalWidth * s)),
@@ -246,7 +254,7 @@ const batch = createQueue(async (file, left) => {
   try { await analyze(file, left === 0); } finally { batchDone++; showCount(); }
 }, { pause: () => sleep(500), onIdle: () => { batchTotal = batchDone = 0; showCount(); } });
 const addImages = (files) => {
-  const take = files.filter((f) => f.type.startsWith('image/')).slice(0, Math.max(0, MAX_BATCH - batchTotal));
+  const take = files.filter((f) => f.type.startsWith('image/') && f.size <= MAX_BYTES).slice(0, Math.max(0, MAX_BATCH - batchTotal));
   if (!take.length) return;
   batchTotal += take.length;
   showCount();
