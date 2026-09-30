@@ -27,6 +27,9 @@ const app = { status: 'IDLE' };
 const setStatus = (s) => { app.status = s; document.body.dataset.status = s; };
 const idle = () => app.status === 'IDLE' || app.status === 'CAROUSEL';
 
+// The analysis in flight, if any: what a change of viewport has to lay out again.
+let session = null;
+
 const carousel = createCarousel(track);
 const stage = createStage($('stage'), $('stage').querySelector('canvas'));
 
@@ -99,10 +102,12 @@ async function analyze(file) {
   if (!clusters.length) return;
   const lightAtTop = lightOnTop(pixels);
 
+  session = { scan: null };
   try {
     carousel.focus(Infinity, true);
     setStatus('EXPANDING');
-    const bloxels = await stage.open(work, cardRect(), unit(), cardCells());
+    const bloxels = await stage.open(work, cardRect(), cardCells);
+
     work.width = work.height = 0; // the source pixels are spent: the bloxel grid holds all that is kept
 
     setStatus('ANALYZING');
@@ -118,11 +123,12 @@ async function analyze(file) {
     $('stack-host').append(stack.el);
     stack.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'steps(5)' });
 
-    const targets = clusters.map((c) => ({ rgb: Object.values(hexToRgb(c.hex)), ...bloxels.cellAt(c.x, c.y) }));
+    const targets = clusters.map((c) => ({ rgb: Object.values(hexToRgb(c.hex)), fx: c.x, fy: c.y }));
     const comparing = [];
     const scan = runScanners($('scanners'), bloxels, targets, (i) => {
       comparing.push(compare(stack, slotOf[i], candidates[i], keep[i]));
     }, T);
+    session.scan = scan;
     await scan.finished;
     await Promise.all(comparing);
 
@@ -140,7 +146,7 @@ async function analyze(file) {
     const card = carousel.insert(palette);
     wire(card);
     paintCard(card);
-    await stage.close();
+    await stage.close(cardRect);
     // The window has closed onto the card exactly, and the card is the same blocks and chips in
     // the same device pixels, so it takes over in the very frame the stage goes: no fade.
     card.style.visibility = '';
@@ -151,6 +157,8 @@ async function analyze(file) {
     console.error(err);
     stage.hide();
   }
+  stage.release();
+  session = null;
   work.width = work.height = 0;
   setStatus('CAROUSEL');
 }
@@ -286,7 +294,14 @@ addEventListener('drop', (e) => {
 });
 
 const repaint = () => document.querySelectorAll('.card.palette').forEach(paintCard);
-watchPixelSnap(() => { applyLayout(); repaint(); });
+watchPixelSnap(() => {
+  applyLayout();
+  repaint();
+  if (session) { // the viewport changed mid-analysis: re-lay the grid, then the drones onto it
+    stage.relayout();
+    session.scan?.refit();
+  }
+});
 // Canvas text falls back to a plain font if it is drawn before the pixel font arrives, so
 // wait for the font before analysing, and redraw the cards whenever a font finishes loading.
 const fontReady = document.fonts.load('16px "Stagwood Sprite 64"');

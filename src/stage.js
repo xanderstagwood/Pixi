@@ -26,25 +26,39 @@ export function createStage(el, canvas) {
     run.cancel();
   }
 
-  let rect;
+  // Sized to the canvas, so every clip edge is a whole device pixel.
+  const fit = () => Object.assign(el.style, { width: canvas.style.width, height: canvas.style.height });
+
+  let bloxels = null;
   return {
     /**
      * Show the image through a window over `at` (the card), then open to the whole viewport.
-     * `units` is pixel.js unit(); `card` is the card's size in cells. Returns the bloxel grid.
+     * `cardCells` gives the card's current size in cells. Returns the bloxel grid.
      */
-    async open(image, at, units, card) {
-      rect = at;
-      const bloxels = createBloxels(canvas, image, units, card);
-      // Sized to the canvas, so every clip edge is a whole device pixel.
-      Object.assign(el.style, { width: canvas.style.width, height: canvas.style.height });
-      el.style.clipPath = clipFor(rect);
-      bloxels.showImage();
+    async open(image, at, cardCells) {
+      bloxels = createBloxels(canvas, image, cardCells);
+      fit();
+      el.style.clipPath = clipFor(at);
       frame.hidden = false;
-      await morph(clipFor(rect), FULL);
+      await morph(clipFor(at), FULL);
       return bloxels;
     },
-    /** Close the window back down onto the card. */
-    close: () => morph(FULL, clipFor(rect)),
+    /** The viewport changed: lay the bloxel grid out again and size the stage to it. */
+    relayout() {
+      if (!bloxels) return;
+      bloxels.resize();
+      fit();
+    },
+    /** Let go of the grid's private copy of the image. */
+    release() {
+      bloxels?.release();
+      bloxels = null;
+    },
+    /** Close the window back down onto the card. `card` is asked for its rect as the window arrives, in case the viewport changed on the way. */
+    async close(card) {
+      await morph(FULL, clipFor(card()));
+      el.style.clipPath = clipFor(card());
+    },
     hide() { frame.hidden = true; },
   };
 }
