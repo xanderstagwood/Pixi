@@ -1,5 +1,5 @@
 import { frames } from './anim.js';
-import { GROUND } from './color.js';
+import { GROUND, hexToRgb } from './color.js';
 import { centerDev } from './pixel.js';
 
 const CELL_PX = 16; // font pixels per bloxel
@@ -64,6 +64,16 @@ export function createBloxels(canvas, source, { dpr, n: unit }, card) {
   tctx.drawImage(base, ox, oy, cols * cell, rows * cell, 0, 0, cols, rows);
   const px = tctx.getImageData(0, 0, cols, rows).data;
 
+  // A block darker than the ground would sit inside a lighter grid line, which reads as a light
+  // rim around dark bloxels. So a block never goes darker than the ground: it merges into it.
+  const g = hexToRgb(GROUND);
+  const luma = (r, gr, b) => 0.2126 * r + 0.7152 * gr + 0.0722 * b;
+  const floor = luma(g.r, g.g, g.b);
+  const shown = new Uint8ClampedArray(px);
+  for (let i = 0; i < cols * rows; i++) {
+    if (luma(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]) < floor) shown.set([g.r, g.g, g.b], i * 4);
+  }
+
   const count = cols * rows;
   const dist = Float32Array.from({ length: count }, (_, i) => Math.hypot(i % cols, Math.floor(i / cols)));
   const order = Array.from({ length: count }, (_, i) => i).sort((a, b) => dist[a] - dist[b]);
@@ -77,7 +87,7 @@ export function createBloxels(canvas, source, { dpr, n: unit }, card) {
     ctx.fillRect(x, y, cell, cell);
     if (size <= 0) return;
     const off = inset + Math.floor((full - size) / 2);
-    ctx.fillStyle = `rgb(${px[i * 4]},${px[i * 4 + 1]},${px[i * 4 + 2]})`;
+    ctx.fillStyle = `rgb(${shown[i * 4]},${shown[i * 4 + 1]},${shown[i * 4 + 2]})`;
     ctx.fillRect(x + off, y + off, size, size);
   };
 
@@ -91,10 +101,10 @@ export function createBloxels(canvas, source, { dpr, n: unit }, card) {
       cy: Math.min(rows - 1, Math.max(0, Math.floor(((fy * img.height - srcY) / srcH) * rows))),
     }),
     /**
-     * What a card keeps of this grid: every cell color, and which cell the viewport
+     * What a card keeps of this grid: every cell color as drawn, and which cell the viewport
      * centre (and so the card's centre) sits on. Lets a card of any size cut its own window.
      */
-    keep: () => ({ cols, rows, rgb: px, cx: (c.x - ox) / cell, cy: (c.y - oy) / cell }),
+    keep: () => ({ cols, rows, rgb: shown, cx: (c.x - ox) / cell, cy: (c.y - oy) / cell }),
     /** Draw the image, then free its working copy. */
     showImage() {
       ctx.drawImage(base, 0, 0);
