@@ -361,7 +361,7 @@ function syncTwinkle() {
   const ctx = overlay.getContext('2d'), blocks = twinkleCells(card.palette), s = unit().n;
   if (!blocks.length) return;
   const t = createTwinkle({
-    rate: () => blocks.length / 150, // a few at a time, not a shower
+    rate: () => blocks.length / 80, // a good scatter at a time, not a shower
     pick: () => Math.floor(Math.random() * blocks.length),
     paint: (i, amount) => paintTwinkle(ctx, blocks[i], s, amount),
   });

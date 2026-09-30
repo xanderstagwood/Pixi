@@ -126,7 +126,7 @@ export function createBloxels(canvas, source, cardCells) {
   // The shimmer: a random block that has finished growing brightens and eases back. Ids are cells, and
   // after a resize an old id may no longer exist.
   const twinkle = createTwinkle({
-    rate: () => g.count / 150, // a few at a time, not a shower
+    rate: () => g.count / 80, // a good scatter at a time, not a shower
     pick: () => {
       const grown = front === Infinity ? g.count : done; // in wave order, the first `done` cells are grown
       return grown ? g.order[Math.floor(Math.random() * grown)] : -1;
