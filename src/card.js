@@ -45,14 +45,14 @@ export const cardCells = () => cells;
 
 /**
  * Positions inside the card, in font pixels. A footer line runs along the bottom (the name at the left,
- * the credit at the right). The chips sit exactly in the middle of the card, with the same breathing
- * room above as below; the block and the card are both whole font pixels, so the middle is too. Sideways
+ * the credit at the right). The chips sit in the middle of the card, lifted half a bloxel so the footer
+ * has its room; the block and the card are both whole font pixels, so every position is too. Sideways
  * they stay half a bloxel off the bloxel lines (see CHIP).
  */
 export function layout() {
   const w = cells.cols * CELL, h = cells.rows * CELL;
   const name = { x: 12, y: h - 24, w: 128, h: 16 };
-  return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: (h - CHIPS_H) / 2 } };
+  return { w, h, name, chips: { ...CHIP, x: (w - CHIP.w) / 2, y: (h - CHIPS_H) / 2 - CELL / 2 } };
 }
 
 const measure = document.createElement('canvas').getContext('2d');
