@@ -36,7 +36,7 @@
 
 * { box-sizing: border-box; margin: 0; border-radius: 0; }
 
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; } /* swipes and drags are handled in script */
 
 body {
   background: var(--gray-13);
@@ -46,6 +46,8 @@ body {
   line-height: calc(16 * var(--px));
   -webkit-font-smoothing: none;
   user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ---- icons: Sprite's 6x6 pixel-art SVGs as masks, filled with their own color ---- */
@@ -85,10 +87,10 @@ body {
   height: var(--card-h);
   display: flex;
   gap: var(--gap);
-  transform: translateX(calc(var(--i, 0) * (var(--card-w) + var(--gap)) * -1 - var(--card-w) / 2));
+  transform: translateX(calc(var(--i, 0) * (var(--card-w) + var(--gap)) * -1 - var(--card-w) / 2 + var(--drag, 0px)));
   transition: transform var(--morph) var(--ease);
 }
-#track.instant { transition: none; }
+#track.instant, #track.swiping { transition: none; }
 
 .card {
   position: relative;

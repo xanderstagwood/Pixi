@@ -3,7 +3,10 @@
 // clicks are left alone. The card dims in place, a ghost follows the pointer, its siblings
 // slide to open the gap, and release commits. Pointer events, not native drag-and-drop.
 // Dragging off the strip does not delete (unlike Sprite's chips): cards have a delete button.
+// With touch, the card is picked up by a long-press first (`track.dataset.reorder` marks it
+// armed, so swipe.js stands down); a mouse press-and-move drags at once.
 const DRAG_THRESHOLD = 4;
+const LONG_PRESS_MS = 350; // touch only: a quick swipe moves the strip, a press-and-hold picks a card up
 
 function ghostOf(card) {
   const r = card.getBoundingClientRect();
@@ -42,6 +45,9 @@ export function attachReorder(track, { canDrag, onReorder }) {
     const dpr = window.devicePixelRatio || 1;
     const snap = (v) => Math.round(v * dpr) / dpr; // keep the ghost on whole device pixels
     let ghost = null, hover = index;
+    const touch = e.pointerType !== 'mouse';
+    let armed = !touch;
+    const timer = touch ? setTimeout(() => { armed = true; track.dataset.reorder = 'armed'; navigator.vibrate?.(10); }, LONG_PRESS_MS) : 0;
 
     const preview = () => items.forEach((el, k) => {
       if (k === index) return;
@@ -52,9 +58,19 @@ export function attachReorder(track, { canDrag, onReorder }) {
       el.style.transform = shift ? `translateX(${shift * step}px)` : '';
     });
 
+    const end = () => {
+      clearTimeout(timer);
+      delete track.dataset.reorder;
+      removeEventListener('pointermove', move);
+      removeEventListener('pointerup', up);
+      removeEventListener('pointercancel', end);
+    };
+
     const move = (ev) => {
       if (!ghost) {
-        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return;
+        const far = Math.hypot(ev.clientX - startX, ev.clientY - startY) >= DRAG_THRESHOLD;
+        if (!armed) { if (far) end(); return; } // moved before the long-press: a swipe, not a pickup
+        if (!far) return;
         card.classList.add('dragging');
         ghost = ghostOf(card);
         window.getSelection().removeAllRanges();
@@ -68,8 +84,7 @@ export function attachReorder(track, { canDrag, onReorder }) {
     };
 
     const up = () => {
-      removeEventListener('pointermove', move);
-      removeEventListener('pointerup', up);
+      end();
       if (!ghost) return;
       ghost.remove();
       document.body.classList.remove('grabbing');
@@ -85,5 +100,6 @@ export function attachReorder(track, { canDrag, onReorder }) {
     };
     addEventListener('pointermove', move);
     addEventListener('pointerup', up);
+    addEventListener('pointercancel', end);
   });
 }

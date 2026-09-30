@@ -9,6 +9,7 @@ import { createStage } from './stage.js';
 import { createStack } from './stack.js';
 import { attachReorder } from './reorder.js';
 import { runScanners } from './scanners.js';
+import { attachSwipe } from './swipe.js';
 import { buildZip } from './export/bundle.js';
 
 const $ = (id) => document.getElementById(id);
@@ -140,7 +141,7 @@ async function analyze(file) {
     card.style.visibility = '';
     // The finished card is the same blocks and chips, in the same device pixels, so it takes over unseen.
     await Promise.all([stage.fadeOut(), stepOut($('stack-host'), () => $('stack-host').replaceChildren())]);
-    card.querySelector('.name').focus({ preventScroll: true });
+    if (matchMedia('(pointer: fine)').matches) card.querySelector('.name').focus({ preventScroll: true }); // not on touch: it would raise the keyboard
   } catch (err) {
     console.error(err);
     stage.hide();
@@ -218,6 +219,12 @@ function copyChip(card, e) {
 
 const go = (i) => { if (idle()) carousel.focus(i); };
 attachReorder(track, { canDrag: idle, onReorder: (from, to) => carousel.move(from, to) });
+attachSwipe(track, { canSwipe: idle, index: () => carousel.index, onSettle: go });
+
+// A long-press on touch would open the browser's image menu; a mouse right-click still gets it, to save the card.
+let touching = false;
+addEventListener('pointerdown', (e) => { touching = e.pointerType !== 'mouse'; }, true);
+addEventListener('contextmenu', (e) => { if (touching) e.preventDefault(); });
 
 track.addEventListener('click', (e) => {
   if (!idle() || e.target.closest('.dl, .rm, .name')) return;
